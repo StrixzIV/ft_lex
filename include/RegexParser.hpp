@@ -19,6 +19,9 @@ class RegexParser {
 
     public:
         static std::string toPostfix(const std::string &regex);
+        
+        // Internal char used for concatenation
+        static const char CONCAT_OP = 1; // SOH (0x01)
 
     private:
         static int _getPrecedence(char c);

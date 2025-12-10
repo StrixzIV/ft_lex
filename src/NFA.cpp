@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "NFA.hpp"
+#include "RegexParser.hpp"
 #include <stack>
 #include <stdexcept>
 
@@ -22,8 +23,8 @@ NFA NFA::fromRegex(const std::string &postfix, int &stateCounter) {
 
         switch (c) {
 
-            case '.': {
-                
+            case RegexParser::CONCAT_OP: {
+
                 NFA right = stack.top();
                 stack.pop();
 
@@ -34,6 +35,11 @@ NFA NFA::fromRegex(const std::string &postfix, int &stateCounter) {
                 stack.push(makeConcat(left, right));
                 break;
 
+            }
+
+            case '.': {
+                stack.push(makeAnyChar(stateCounter));
+                break;
             }
             
             case '|': {
@@ -179,5 +185,20 @@ NFA NFA::makeOption(NFA nfa, int& stateCounter) {
     nfa.accept->epsilonTransitions.push_back(end);
     nfa.accept->isAccepting = false;
 
+    return NFA(start, end);
+}
+
+NFA NFA::makeAnyChar(int &stateCounter) {
+    auto start = std::make_shared<State>(stateCounter++);
+    auto end = std::make_shared<State>(stateCounter++);
+    
+    // Add transitions for all characters except newline
+    // Assuming 8-bit char -128 to 127
+    for (int i = -128; i <= 127; ++i) {
+        char c = (char)i;
+        if (c != '\n') {
+            start->transitions.insert({c, end});
+        }
+    }
     return NFA(start, end);
 }

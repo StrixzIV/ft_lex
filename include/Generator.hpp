@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Generator.hpp                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: antigravity <antigravity@42.fr>            +#+  +:+       +#+        */
+/*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/12/11 02:50:00 by antigravity       #+#    #+#             */
-/*   Updated: 2025/12/11 02:50:00 by antigravity      ###   ########.fr       */
+/*   Created: 2025/12/11 03:01:32 by jikaewsi          #+#    #+#             */
+/*   Updated: 2025/12/11 03:01:32 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 

@@ -3,7 +3,7 @@
 %}
 
 %%
-"test"  { printf("Found test\n"); }
+test  { printf("Found test\n"); }
 %%
 
 int main() { yylex(); }

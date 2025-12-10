@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Generator.cpp                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: antigravity <antigravity@42.fr>            +#+  +:+       +#+        */
+/*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/12/11 02:50:00 by antigravity       #+#    #+#             */
-/*   Updated: 2025/12/11 02:50:00 by antigravity      ###   ########.fr       */
+/*   Created: 2025/12/11 03:01:45 by jikaewsi          #+#    #+#             */
+/*   Updated: 2025/12/11 03:01:45 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -104,6 +104,7 @@ void Generator::_writeYYLex(const DFA& dfa, const LexerParser& parser, std::ostr
     out << "        // Note: Real lex has complex buffering. We will use a simple fixed buffer for demo.\n";
     out << "        static char buffer[4096];\n";
     out << "        int buf_idx = 0;\n";
+    out << "        int last_accepting_idx = -1;\n";
     out << "        \n";
     out << "        // Check EOF first\n";
     out << "        c = getchar();\n";
@@ -118,6 +119,7 @@ void Generator::_writeYYLex(const DFA& dfa, const LexerParser& parser, std::ostr
     out << "            current_state = next_state;\n";
     out << "            if (yy_accept[current_state] != -1) {\n";
     out << "                last_accepting_state = current_state;\n";
+    out << "                last_accepting_idx = buf_idx;\n";
     out << "            }\n";
     out << "            \n";
     out << "            c = getchar();\n";
@@ -130,18 +132,23 @@ void Generator::_writeYYLex(const DFA& dfa, const LexerParser& parser, std::ostr
     out << "        \n";
     out << "        // No more transitions.\n";
     out << "        if (last_accepting_state != -1) {\n";
-    
-    // IMPORTANT: The simplified logic above is tricky with streams.
-    // Let's implement correct backtracking:
-    // We have a buffer. 
-    // `last_accepting_pos` would be an index in `buffer`.
-    
-    out << "            /* Backtracking Logic */\n";
-    out << "            // We need to unput chars from buffer[last_match_idx+1] to end\n";
-    out << "            // For standard lex behavior.\n";
+    out << "            // Match found!\n";
+    out << "            // Backtrack: unwinding characters read past the match\n";
+    out << "            \n";
+    out << "            // If we hit EOF during search, buf_idx might be greater than last_accepting_idx\n";
+    out << "            // If we broke due to invalid transition, we read one char that caused failure (last char in buffer).\n";
+    out << "            // But next_state check is done AFTER reading 'c' and looking up table. \n";
+    out << "            // The loop structure: Read c -> Add to buf -> Lookup.\n";
+    out << "            // If Lookup is -1, loop breaks. 'c' is in buffer. It is NOT part of match (unless current_state was accepting before transition, but we already tracked that).\n";
+    out << "            // So characters from last_accepting_idx to buf_idx-1 (inclusive) are excess.\n";
+    out << "            \n";
+    out << "            while (buf_idx > last_accepting_idx) {\n";
+    out << "                ungetc(buffer[--buf_idx], stdin);\n";
+    out << "            }\n";
+    out << "            buffer[buf_idx] = 0; // Terminate yytext at match end\n";
     out << "            \n";
     out << "            yytext = buffer;\n";
-    out << "            // yyleng = ...\n";
+    out << "            yyleng = buf_idx;\n";
     out << "            \n";
     out << "            switch (yy_accept[last_accepting_state]) {\n";
     {
@@ -155,8 +162,11 @@ void Generator::_writeYYLex(const DFA& dfa, const LexerParser& parser, std::ostr
     out << "            }\n";
     out << "        } else {\n";
     out << "            // No match. Echo char and continue.\n";
-    out << "            // ungetc everything except first char.\n";
     out << "            printf(\"%c\", buffer[0]);\n";
+    out << "            // Unput everything else [1..buf_idx-1]\n";
+    out << "            while (buf_idx > 1) {\n";
+    out << "                ungetc(buffer[--buf_idx], stdin);\n";
+    out << "            }\n";
     out << "        }\n";
     out << "    }\n";
     out << "}\n";

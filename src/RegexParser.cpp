@@ -29,7 +29,7 @@ std::string RegexParser::toPostfix(const std::string& regex) {
                 operators.pop();
             }
             if (!operators.empty()) operators.pop(); // Pop '('
-        } else if (c == '*' || c == '+' || c == '?' || c == '.' || c == '|') {
+        } else if (c == '*' || c == '+' || c == '?' || c == CONCAT_OP || c == '|') {
             while (!operators.empty() && operators.top() != '(' && 
                    _getPrecedence(operators.top()) >= _getPrecedence(c)) {
                 postfix += operators.top();
@@ -62,7 +62,7 @@ std::string RegexParser::_addExplicitConcat(const std::string& regex) {
             bool nextIsOperator = (next == ')' || next == '*' || next == '+' || next == '?' || next == '|');
             
             if (!isOperator && !nextIsOperator) {
-                result += '.';
+                result += CONCAT_OP;
             }
         }
     }
@@ -71,7 +71,7 @@ std::string RegexParser::_addExplicitConcat(const std::string& regex) {
 
 int RegexParser::_getPrecedence(char c) {
     if (c == '*' || c == '+' || c == '?') return 3;
-    if (c == '.') return 2;
+    if (c == CONCAT_OP) return 2;
     if (c == '|') return 1;
     return 0;
 }

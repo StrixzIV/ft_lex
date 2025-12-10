@@ -50,6 +50,8 @@ class NFA {
         static NFA makeKleene(NFA nfa, int &stateCounter);
         static NFA makePlus(NFA nfa, int &stateCounter);
         static NFA makeOption(NFA nfa, int &stateCounter);
+        
+        static NFA makeAnyChar(int &stateCounter);
 
     };
 

@@ -44,16 +44,21 @@ void LexerParser::_splitSections() {
     }
 
     _definitions = _content.substr(0, first_sep_pos);
+    
+    size_t pos;
+    
+    while ((pos = _definitions.find("%{")) != std::string::npos) {
+        _definitions.erase(pos, 2);
+    }
+
+    while ((pos = _definitions.find("%}")) != std::string::npos) {
+        _definitions.erase(pos, 2);
+    }
 
     size_t start_rules_pos = first_sep_pos + 2;
     size_t second_sep_pos = _content.find("%%", start_rules_pos);
 
     if (second_sep_pos == std::string::npos) {
-        // No second delimiter, everything after first %% is rules (technically allowed?)
-        // Standard lex usually implies 3 sections, but let's see. 
-        // POSIX lex says: "Definitions %% Rules %% User Code"
-        // If User Code is empty, the second %% is optional in some implementations, but let's stick to parsing it if present.
-        // Actually, some sources say the second %% is optional if no user code.
         _rules = _content.substr(start_rules_pos);
         _userCode = "";
     }
