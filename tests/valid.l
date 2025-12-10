@@ -4,5 +4,6 @@
 
 %%
 "test"  { printf("Found test\n"); }
-.       { printf("Found char: %s\n", yytext); }
 %%
+
+int main() { yylex(); }

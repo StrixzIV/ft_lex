@@ -1,24 +1,29 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   ft_lex.hpp                                         :+:      :+:    :+:   */
+/*   RegexParser.hpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/12/11 01:30:55 by jikaewsi          #+#    #+#             */
-/*   Updated: 2025/12/11 01:30:55 by jikaewsi         ###   ########.fr       */
+/*   Created: 2025/12/11 02:12:59 by jikaewsi          #+#    #+#             */
+/*   Updated: 2025/12/11 02:12:59 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef FT_LEX_HPP
-#define FT_LEX_HPP
+#ifndef REGEXPARSER_HPP
+#define REGEXPARSER_HPP
 
 # include <string>
-# include <vector>
-# include <memory> 
 
-# include "LexerParser.hpp"
+class RegexParser {
 
-// Forward declarations and common includes
+    public:
+        static std::string toPostfix(const std::string &regex);
+
+    private:
+        static int _getPrecedence(char c);
+        static std::string _addExplicitConcat(const std::string &regex);
+
+    };
 
 #endif
