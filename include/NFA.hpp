@@ -18,6 +18,7 @@
 #include <memory>
 #include <string>
 #include <set>
+#include "Token.hpp"
 
 struct State {
 
@@ -41,10 +42,11 @@ class NFA {
 
         NFA(std::shared_ptr<State> start, std::shared_ptr<State> accept): start(start), accept(accept) {}
 
-        static NFA fromRegex(const std::string &postfix, int &stateCounter);
+        static NFA fromRegex(const std::vector<Token> &postfix, int &stateCounter);
         
         // Operations
         static NFA makeChar(char c, int &stateCounter);
+        static NFA makeSet(const std::set<char> &chars, int &stateCounter);
         static NFA makeConcat(NFA left, NFA right);
         static NFA makeUnion(NFA top, NFA bottom, int &stateCounter);
         static NFA makeKleene(NFA nfa, int &stateCounter);

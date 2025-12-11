@@ -13,19 +13,22 @@
 #ifndef REGEXPARSER_HPP
 #define REGEXPARSER_HPP
 
-# include <string>
+#include <string>
+#include <vector>
+#include "Token.hpp"
 
 class RegexParser {
 
     public:
-        static std::string toPostfix(const std::string &regex);
+        static std::vector<Token> toPostfix(const std::string &regex);
         
-        // Internal char used for concatenation
+        // Internal char used for concatenation (represented as a Token now)
         static const char CONCAT_OP = 1; // SOH (0x01)
 
     private:
-        static int _getPrecedence(char c);
-        static std::string _addExplicitConcat(const std::string &regex);
+        static int _getPrecedence(const Token& t);
+        static std::vector<Token> _tokenize(const std::string &regex);
+        static std::vector<Token> _addExplicitConcat(const std::vector<Token> &tokens);
 
     };
 

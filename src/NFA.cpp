@@ -15,84 +15,55 @@
 #include <stack>
 #include <stdexcept>
 
-NFA NFA::fromRegex(const std::string &postfix, int &stateCounter) {
+NFA NFA::fromRegex(const std::vector<Token> &postfix, int &stateCounter) {
 
     std::stack<NFA> stack;
 
-    for (char c: postfix) {
+    for (const auto& token : postfix) {
 
-        switch (c) {
-
-            case RegexParser::CONCAT_OP: {
-
-                NFA right = stack.top();
-                stack.pop();
-
-                
-                NFA left = stack.top();
-                stack.pop();
-
-                stack.push(makeConcat(left, right));
-                break;
-
+        if (token.type == CHAR) {
+            stack.push(makeChar(token.c, stateCounter));
+        } else if (token.type == CHARSET) {
+            stack.push(makeSet(token.charSet, stateCounter));
+        } else if (token.type == OPERATOR) {
+            switch (token.c) {
+                case RegexParser::CONCAT_OP: {
+                    NFA right = stack.top(); stack.pop();
+                    NFA left = stack.top(); stack.pop();
+                    stack.push(makeConcat(left, right));
+                    break;
+                }
+                case '.': {
+                    stack.push(makeAnyChar(stateCounter));
+                    break;
+                }
+                case '|': {
+                    NFA bottom = stack.top(); stack.pop();
+                    NFA top = stack.top(); stack.pop();
+                    stack.push(makeUnion(top, bottom, stateCounter));
+                    break;
+                }
+                case '*': {
+                    NFA nfa = stack.top(); stack.pop();
+                    stack.push(makeKleene(nfa, stateCounter));
+                    break;
+                }
+                case '+': {
+                    NFA nfa = stack.top(); stack.pop();
+                    stack.push(makePlus(nfa, stateCounter));
+                    break;
+                }
+                case '?': {
+                    NFA nfa = stack.top(); stack.pop();
+                    stack.push(makeOption(nfa, stateCounter));
+                    break;
+                }
+                default: {
+                    // Should not happen for valid postfix
+                    throw std::runtime_error("Unknown operator in postfix");
+                }
             }
-
-            case '.': {
-                stack.push(makeAnyChar(stateCounter));
-                break;
-            }
-            
-            case '|': {
-                
-                NFA bottom = stack.top();
-                stack.pop();
-
-                
-                NFA top = stack.top();
-                stack.pop();
-
-                stack.push(makeUnion(top, bottom, stateCounter));
-                break;
-
-            }
-            
-            case '*': {
-                
-                NFA nfa = stack.top();
-                stack.pop();
-
-                stack.push(makeKleene(nfa, stateCounter));
-                break;
-
-            }
-            
-            case '+': {
-                
-                NFA nfa = stack.top();
-                stack.pop();
-
-                stack.push(makePlus(nfa, stateCounter));
-                break;
-
-            }
-            
-            case '?': {
-                
-                NFA nfa = stack.top();
-                stack.pop();
-
-                stack.push(makeOption(nfa, stateCounter));
-                break;
-
-            }
-            
-            default: {
-                stack.push(makeChar(c, stateCounter));
-                break;
-            }
-
         }
-    
     }
 
     if (stack.size() != 1) {
@@ -101,6 +72,16 @@ NFA NFA::fromRegex(const std::string &postfix, int &stateCounter) {
 
     return stack.top();
 
+}
+
+NFA NFA::makeSet(const std::set<char> &chars, int &stateCounter) {
+    auto start = std::make_shared<State>(stateCounter++);
+    auto end = std::make_shared<State>(stateCounter++);
+    
+    for (char c : chars) {
+        start->transitions.insert({c, end});
+    }
+    return NFA(start, end);
 }
 
 NFA NFA::makeChar(char c, int &stateCounter) {

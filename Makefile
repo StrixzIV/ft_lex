@@ -17,7 +17,7 @@ OBJS        = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 LIBL_SRCS   = $(wildcard $(LIBL_DIR)/*.c)
 LIBL_OBJS   = $(patsubst $(LIBL_DIR)/%.c, $(OBJ_DIR)/%.o, $(LIBL_SRCS))
 
-all: $(NAME) $(LIBL)
+all: clang $(NAME) $(LIBL)
 
 $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
@@ -33,6 +33,9 @@ $(OBJ_DIR)/%.o: $(LIBL_DIR)/%.c | $(OBJ_DIR)
 
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
+
+clang:
+	python3 generate_compile_commands.py
 
 clean:
 	rm -rf $(OBJ_DIR)

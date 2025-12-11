@@ -48,8 +48,8 @@ int main(int argc, char** argv) {
         
         int priority = 0;
         for (const auto& rule : rules) {
-            std::string postfix = RegexParser::toPostfix(rule.regex);
-            // std::cout << "  Regex: " << rule.regex << " -> Postfix: " << postfix;
+            std::vector<Token> postfix = RegexParser::toPostfix(rule.regex);
+            // std::cout << "  Regex: " << rule.regex << " -> Postfix size: " << postfix.size();
             
             try {
                 NFA nfa = NFA::fromRegex(postfix, stateCounter);
