@@ -13,11 +13,11 @@
 #ifndef FT_LEX_HPP
 #define FT_LEX_HPP
 
-# include <string>
-# include <vector>
-# include <memory> 
+#include <string>
+#include <vector>
+#include <memory> 
 
-# include "LexerParser.hpp"
+#include "LexerParser.hpp"
 
 // Forward declarations and common includes
 

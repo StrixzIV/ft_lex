@@ -1,10 +1,26 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Token.hpp                                          :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/12/11 02:12:59 by jikaewsi          #+#    #+#             */
+/*   Updated: 2025/12/11 02:12:59 by jikaewsi         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #ifndef TOKEN_HPP
 #define TOKEN_HPP
 
 #include <set>
 #include <vector>
 
-enum TokenType { CHAR, OPERATOR, CHARSET };
+enum TokenType { 
+    CHAR, 
+    OPERATOR, 
+    CHARSET 
+};
 
 struct Token {
     TokenType type;

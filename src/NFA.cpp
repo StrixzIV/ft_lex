@@ -28,8 +28,10 @@ NFA NFA::fromRegex(const std::vector<Token> &postfix, int &stateCounter) {
         } else if (token.type == OPERATOR) {
             switch (token.c) {
                 case RegexParser::CONCAT_OP: {
-                    NFA right = stack.top(); stack.pop();
-                    NFA left = stack.top(); stack.pop();
+                    NFA right = stack.top();
+                    stack.pop();
+                    NFA left = stack.top();
+                    stack.pop();
                     stack.push(makeConcat(left, right));
                     break;
                 }
@@ -38,23 +40,28 @@ NFA NFA::fromRegex(const std::vector<Token> &postfix, int &stateCounter) {
                     break;
                 }
                 case '|': {
-                    NFA bottom = stack.top(); stack.pop();
-                    NFA top = stack.top(); stack.pop();
+                    NFA bottom = stack.top();
+                    stack.pop();
+                    NFA top = stack.top();
+                    stack.pop();
                     stack.push(makeUnion(top, bottom, stateCounter));
                     break;
                 }
                 case '*': {
-                    NFA nfa = stack.top(); stack.pop();
+                    NFA nfa = stack.top();
+                    stack.pop();
                     stack.push(makeKleene(nfa, stateCounter));
                     break;
                 }
                 case '+': {
-                    NFA nfa = stack.top(); stack.pop();
+                    NFA nfa = stack.top();
+                    stack.pop();
                     stack.push(makePlus(nfa, stateCounter));
                     break;
                 }
                 case '?': {
-                    NFA nfa = stack.top(); stack.pop();
+                    NFA nfa = stack.top();
+                    stack.pop();
                     stack.push(makeOption(nfa, stateCounter));
                     break;
                 }

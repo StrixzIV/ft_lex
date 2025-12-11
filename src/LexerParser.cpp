@@ -15,11 +15,19 @@
 #include <sstream>
 #include <iostream>
 
-LexerParser::LexerParser(const std::string& filename) : _filename(filename) {}
+LexerParser::LexerParser(const std::string &filename) : _filename(filename) {}
 
-const std::string &LexerParser::getDefinitions() const { return _definitions; }
-const std::string &LexerParser::getRules() const { return _rules; }
-const std::string &LexerParser::getUserCode() const { return _userCode; }
+const std::string &LexerParser::getDefinitions() const {
+    return _definitions;
+}
+
+const std::string &LexerParser::getRules() const {
+    return _rules;
+}
+
+const std::string &LexerParser::getUserCode() const {
+    return _userCode;
+}
 
 void LexerParser::_readFile() {
 
@@ -61,9 +69,7 @@ void LexerParser::_splitSections() {
     if (second_sep_pos == std::string::npos) {
         _rules = _content.substr(start_rules_pos);
         _userCode = "";
-    }
-    
-    else {
+    } else {
         _rules = _content.substr(start_rules_pos, second_sep_pos - start_rules_pos);
         _userCode = _content.substr(second_sep_pos + 2);
     }
@@ -76,7 +82,9 @@ void LexerParser::parse() {
     _parseRules();
 }
 
-const std::vector<LexerParser::Rule>& LexerParser::getRulesList() const { return _rulesList; }
+const std::vector<LexerParser::Rule> &LexerParser::getRulesList() const {
+    return _rulesList;
+}
 
 void LexerParser::_parseRules() {
     std::istringstream stream(_rules);
@@ -85,10 +93,14 @@ void LexerParser::_parseRules() {
     while (std::getline(stream, line)) {
         // Simple trim
         size_t first = line.find_first_not_of(" \t\r\n");
-        if (first == std::string::npos) continue; // Empty line
+        if (first == std::string::npos) {
+            continue; // Empty line
+        }
         
         std::string trimmed = line.substr(first);
-        if (trimmed.empty()) continue;
+        if (trimmed.empty()) {
+            continue;
+        }
 
         // Find split between regex and action
         // Regex is the first word (whitespace delimited), Action is the rest

@@ -39,12 +39,12 @@ class DFA {
         std::shared_ptr<DFAState> start;
         std::vector<std::shared_ptr<DFAState>> states;
 
-        static DFA fromNFA(const NFA& nfa, int& dfaStateCounter);
+        static DFA fromNFA(const NFA &nfa, int &dfaStateCounter);
 
     private:
-        static std::set<std::shared_ptr<State>> _epsilonClosure(const std::set<std::shared_ptr<State>>& states);
-        static std::set<std::shared_ptr<State>> _move(const std::set<std::shared_ptr<State>>& states, char c);
+        static std::set<std::shared_ptr<State>> _epsilonClosure(const std::set<std::shared_ptr<State>> &states);
+        static std::set<std::shared_ptr<State>> _move(const std::set<std::shared_ptr<State>> &states, char c);
 
-    };
+};
 
 #endif

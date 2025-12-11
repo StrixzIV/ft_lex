@@ -18,14 +18,16 @@
 #include <iostream>
 
 class Generator {
+
 public:
-    static void generate(const DFA& dfa, const LexerParser& parser, std::ostream& out);
+    static void generate(const DFA &dfa, const LexerParser &parser, std::ostream &out);
 
 private:
-    static void _writeHeader(const LexerParser& parser, std::ostream& out);
-    static void _writeTables(const DFA& dfa, std::ostream& out);
-    static void _writeYYLex(const DFA& dfa, const LexerParser& parser, std::ostream& out);
-    static void _writeUserCode(const LexerParser& parser, std::ostream& out);
+    static void _writeHeader(const LexerParser &parser, std::ostream &out);
+    static void _writeTables(const DFA &dfa, std::ostream &out);
+    static void _writeYYLex(const DFA &dfa, const LexerParser &parser, std::ostream &out);
+    static void _writeUserCode(const LexerParser &parser, std::ostream &out);
+
 };
 
 #endif

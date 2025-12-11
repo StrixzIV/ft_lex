@@ -19,17 +19,17 @@
 
 class RegexParser {
 
-    public:
-        static std::vector<Token> toPostfix(const std::string &regex);
-        
-        // Internal char used for concatenation (represented as a Token now)
-        static const char CONCAT_OP = 1; // SOH (0x01)
+public:
+    static std::vector<Token> toPostfix(const std::string &regex);
+    
+    // Internal char used for concatenation (represented as a Token now)
+    static const char CONCAT_OP = 1; // SOH (0x01)
 
-    private:
-        static int _getPrecedence(const Token& t);
-        static std::vector<Token> _tokenize(const std::string &regex);
-        static std::vector<Token> _addExplicitConcat(const std::vector<Token> &tokens);
+private:
+    static int _getPrecedence(const Token &t);
+    static std::vector<Token> _tokenize(const std::string &regex);
+    static std::vector<Token> _addExplicitConcat(const std::vector<Token> &tokens);
 
-    };
+};
 
 #endif

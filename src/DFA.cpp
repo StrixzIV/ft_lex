@@ -16,7 +16,7 @@
 #include <algorithm>
 #include <iostream>
 
-DFA DFA::fromNFA(const NFA& nfa, int& dfaStateCounter) {
+DFA DFA::fromNFA(const NFA &nfa, int &dfaStateCounter) {
     DFA dfa;
     std::map<std::set<int>, std::shared_ptr<DFAState>> dfaStatesMap;
     std::queue<std::shared_ptr<DFAState>> worklist;
@@ -29,12 +29,14 @@ DFA DFA::fromNFA(const NFA& nfa, int& dfaStateCounter) {
     // Create Initial DFA State
     auto startDFA = std::make_shared<DFAState>(dfaStateCounter++);
     std::set<int> startIds;
-    for (const auto& s : startSet) startIds.insert(s->id);
+    for (const auto &s : startSet) {
+        startIds.insert(s->id);
+    }
     startDFA->nfaStates = startIds;
 
     // Check acceptance
     int winningPriority = -1;
-    for (const auto& s : startSet) {
+    for (const auto &s : startSet) {
         if (s->isAccepting) {
             if (winningPriority == -1 || (s->priority != -1 && s->priority < winningPriority)) {
                 winningPriority = s->priority;
@@ -55,20 +57,25 @@ DFA DFA::fromNFA(const NFA& nfa, int& dfaStateCounter) {
     {
          std::set<int> visited;
          std::queue<std::shared_ptr<State>> q;
+         
          q.push(nfa.start);
          visited.insert(nfa.start->id);
          idToState[nfa.start->id] = nfa.start;
-         while(!q.empty()){
-             auto curr = q.front(); q.pop();
-             for(auto& t : curr->transitions) {
-                 if(visited.find(t.second->id) == visited.end()){
+         
+         while (!q.empty()) {
+             auto curr = q.front();
+             q.pop();
+             
+             for (auto &t : curr->transitions) {
+                 if (visited.find(t.second->id) == visited.end()) {
                      visited.insert(t.second->id);
                      idToState[t.second->id] = t.second;
                      q.push(t.second);
                  }
              }
-             for(auto& ep : curr->epsilonTransitions) {
-                 if(visited.find(ep->id) == visited.end()){
+             
+             for (auto &ep : curr->epsilonTransitions) {
+                 if (visited.find(ep->id) == visited.end()) {
                      visited.insert(ep->id);
                      idToState[ep->id] = ep;
                      q.push(ep);
@@ -86,13 +93,13 @@ DFA DFA::fromNFA(const NFA& nfa, int& dfaStateCounter) {
         
         // Reconstruct current Set of State*
         std::set<std::shared_ptr<State>> currentSet;
-        for(int id : currentDFA->nfaStates) {
+        for (int id : currentDFA->nfaStates) {
             currentSet.insert(idToState[id]);
         }
 
         // Collect inputs
-        for (const auto& s : currentSet) {
-            for (const auto& t : s->transitions) {
+        for (const auto &s : currentSet) {
+            for (const auto &t : s->transitions) {
                 inputs.insert(t.first);
             }
         }
@@ -101,10 +108,14 @@ DFA DFA::fromNFA(const NFA& nfa, int& dfaStateCounter) {
             std::set<std::shared_ptr<State>> moveSet = _move(currentSet, c);
             std::set<std::shared_ptr<State>> closureSet = _epsilonClosure(moveSet);
 
-            if (closureSet.empty()) continue; // Dead state, implicit
+            if (closureSet.empty()) {
+                continue; // Dead state, implicit
+            }
 
             std::set<int> nextIds;
-            for (const auto& s : closureSet) nextIds.insert(s->id);
+            for (const auto &s : closureSet) {
+                nextIds.insert(s->id);
+            }
 
             if (dfaStatesMap.find(nextIds) == dfaStatesMap.end()) {
                 auto newDFA = std::make_shared<DFAState>(dfaStateCounter++);
@@ -112,7 +123,7 @@ DFA DFA::fromNFA(const NFA& nfa, int& dfaStateCounter) {
                 
                 // Acceptance logic
                 int winP = -1;
-                for (const auto& s : closureSet) {
+                for (const auto &s : closureSet) {
                     if (s->isAccepting) {
                         if (winP == -1 || (s->priority != -1 && s->priority < winP)) {
                             winP = s->priority;
@@ -136,33 +147,32 @@ DFA DFA::fromNFA(const NFA& nfa, int& dfaStateCounter) {
     return dfa;
 }
 
-std::set<std::shared_ptr<State>> DFA::_epsilonClosure(const std::set<std::shared_ptr<State>>& states) {
-
+std::set<std::shared_ptr<State>> DFA::_epsilonClosure(const std::set<std::shared_ptr<State>> &states) {
     std::set<std::shared_ptr<State>> closure = states;
     std::stack<std::shared_ptr<State>> state_stack;
     
-    for (const auto& s : states) state_stack.push(s);
+    for (const auto &s : states) {
+        state_stack.push(s);
+    }
 
     while (!state_stack.empty()) {
-
         auto s = state_stack.top();
         state_stack.pop();
         
-        for (const auto& next : s->epsilonTransitions) {
+        for (const auto &next : s->epsilonTransitions) {
             if (closure.find(next) == closure.end()) {
                 closure.insert(next);
                 state_stack.push(next);
             }
         }
-
     }
 
     return closure;
 }
 
-std::set<std::shared_ptr<State>> DFA::_move(const std::set<std::shared_ptr<State>>& states, char c) {
+std::set<std::shared_ptr<State>> DFA::_move(const std::set<std::shared_ptr<State>> &states, char c) {
     std::set<std::shared_ptr<State>> result;
-    for (const auto& s : states) {
+    for (const auto &s : states) {
         auto range = s->transitions.equal_range(c);
         for (auto it = range.first; it != range.second; ++it) {
             result.insert(it->second);

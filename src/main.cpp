@@ -94,9 +94,7 @@ int main(int argc, char** argv) {
         outfile.close();
         std::cout << "Generated lex.yy.c successfully.\n";
 
-    }
-    
-    catch (const std::exception& e) {
+    } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
