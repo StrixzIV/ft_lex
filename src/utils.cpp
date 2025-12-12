@@ -1,24 +1,25 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   template.hpp                                       :+:      :+:    :+:   */
+/*   utils.cpp                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/12/13 00:43:04 by jikaewsi          #+#    #+#             */
-/*   Updated: 2025/12/13 01:18:15 by jikaewsi         ###   ########.fr       */
+/*   Created: 2025/12/13 01:19:29 by jikaewsi          #+#    #+#             */
+/*   Updated: 2025/12/13 01:19:44 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef TEMPLATE_HPP
-#define TEMPLATE_HPP
+#include "utils.hpp"
 
-#include <cstddef>
+std::string replace_placeholder(std::string &source, const std::string_view &placeholder, const std::string &replacement) {
+    
+    std::string::size_type pos = source.find(placeholder.data());
+    
+    if (pos != std::string::npos) {
+        source.replace(pos, placeholder.length(), replacement);
+    }
+    
+    return source;
 
-extern const std::size_t    TEMPLATE_C_SIZE;
-extern const unsigned char  TEMPLATE_C_START[];
-
-extern const std::size_t    TEMPLATE_PY_SIZE;
-extern const unsigned char  TEMPLATE_PY_START[];
-
-#endif
+}

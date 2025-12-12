@@ -11,45 +11,56 @@
 /* ************************************************************************** */
 
 #include <iostream>
-#include "../include/ft_lex.hpp"
-#include "RegexParser.hpp"
+#include <fstream>
+#include <string>
+#include <memory>
+
 #include "NFA.hpp"
 #include "DFA.hpp"
-#include "Generator.hpp"
-#include <fstream>
+#include "RegexParser.hpp"
+
+#include "AGenerator.hpp"
+#include "CGenerator.hpp"
+#include "PythonGenerator.hpp"
 
 int main(int argc, char** argv) {
 
-    if (argc < 2) {
-        std::cerr << "Usage: ./ft_lex [file.l]" << std::endl;
-        return 1;
+    std::string target_lang = "c";
+    
+    if (argc > 2) {
+        target_lang = argv[2];
     }
     
-    std::cout << "ft_lex: Processing " << argv[1] << "..." << std::endl;
+    std::string output_filename;
+    
+    if (target_lang == "c") {
+        output_filename = "lex.yy.c";
+    }
+    
+    else if (target_lang == "python") {
+        output_filename = "lex.yy.py";
+    }
+    
+    else {
+        throw std::runtime_error("Unsupported target language '" + target_lang + "'. Use 'c' or 'python'.");
+    }
+
+    std::cout << "ft_lex: Processing " << argv[1] << " for target '" << target_lang << "'..." << std::endl;
     
     try {
+
         LexerParser parser(argv[1]);
         parser.parse();
 
-        // Temporary debug output
-        std::cout << "--- Definitions ---\n" << parser.getDefinitions().size() << " bytes\n";
-        std::cout << "--- Rules ---\n" << parser.getRules().size() << " bytes\n";
-        
-        const auto& rules = parser.getRulesList();
-
-        // ... inside main ...
         int stateCounter = 0;
-        
-        // Master NFA parts
         auto masterStart = std::make_shared<State>(stateCounter++);
         std::vector<NFA> allNFAs;
 
-        std::cout << "Parsed " << rules.size() << " rules:\n";
+        std::cout << "Parsed " << parser.getRulesList().size() << " rules:\n";
         
         int priority = 0;
-        for (const auto& rule : rules) {
+        for (const auto& rule : parser.getRulesList()) {
             std::vector<Token> postfix = RegexParser::toPostfix(rule.regex);
-            // std::cout << "  Regex: " << rule.regex << " -> Postfix size: " << postfix.size();
             
             try {
                 NFA nfa = NFA::fromRegex(postfix, stateCounter);
@@ -62,39 +73,50 @@ int main(int argc, char** argv) {
                 // Connect master start to nfa start
                 masterStart->epsilonTransitions.push_back(nfa.start);
                 
-                allNFAs.push_back(nfa); // Keep them alive? Shared ptrs should handle it if referenced by masterStart
-                
-                // std::cout << " -> NFA fragment added.\n";
+                allNFAs.push_back(nfa);
             } catch (const std::exception& e) {
                 std::cout << " -> NFA Error: " << e.what() << "\n";
             }
         }
         
-        // Technically, the Master NFA doesn't have a single accepting state, but a set of them.
-        // But for DFA construction we only need the start state.
-        // We create a dummy NFA object to pass valid start state.
-        auto dummyAccept = std::make_shared<State>(stateCounter++); // Unused
+        auto dummyAccept = std::make_shared<State>(stateCounter++);
         NFA masterNFA(masterStart, dummyAccept);
         
         std::cout << "Master NFA created (" << stateCounter << " states total).\n";
-        
-        // Build DFA
+
         int dfaStateCounter = 0;
         DFA dfa = DFA::fromNFA(masterNFA, dfaStateCounter);
         
         std::cout << "DFA Construction Complete: " << dfa.states.size() << " states.\n";
-        
-        // Generate Output
-        std::ofstream outfile("lex.yy.c");
-        if (!outfile.is_open()) {
-            throw std::runtime_error("Could not create lex.yy.c");
+    
+        std::unique_ptr<AGenerator> generator;
+
+        if (target_lang == "c") {
+            generator = std::make_unique<CGenerator>();
         }
         
-        Generator::generate(dfa, parser, outfile);
-        outfile.close();
-        std::cout << "Generated lex.yy.c successfully.\n";
+        else if (target_lang == "python") {
+            generator = std::make_unique<PythonGenerator>();
+        }
 
-    } catch (const std::exception& e) {
+        else {
+            throw std::runtime_error("Unsupported target language '" + target_lang + "'. Use 'c' or 'python'.");
+        }
+
+        std::ofstream outfile(output_filename);
+        
+        if (!outfile.is_open()) {
+            throw std::runtime_error("Could not create " + output_filename);
+        }
+        
+        generator->generate(dfa, parser, outfile); 
+        
+        outfile.close();
+        std::cout << "Generated " << output_filename << " successfully.\n";
+
+    }
+    
+    catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }

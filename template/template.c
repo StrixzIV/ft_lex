@@ -61,7 +61,7 @@ int yylex(void) {
             yyleng = buf_idx;
             
             switch (yy_accept[last_accepting_state]) {
-__YYLEX_RULES_PLACEHOLDER__
+__YYLEX_BODY_PLACEHOLDER__
             }
         } else {
             // No match. Echo char and unput everything else.
