@@ -3,6 +3,6 @@
 %}
 
 %%
-"test"  { printf("Found test\n"); }
+test  { printf("Found test\n"); }
 .       { printf("Found char: %s\n", yytext); }
 %%
