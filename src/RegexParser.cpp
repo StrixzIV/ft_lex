@@ -86,7 +86,14 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
             // Parse character set
             std::set<char> set;
             i++;
-            // TODO: Handle negation [^...]
+            
+            // Check for negation [^...]
+            bool negated = false;
+            if (i < regex.size() && regex[i] == '^') {
+                negated = true;
+                i++;
+            }
+            
             bool first = true;
             size_t start = i;
             
@@ -175,7 +182,25 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
                     set.insert(current);
                 }
             }
+            
+            // If negated, invert the character set
+            if (negated) {
+                std::set<char> invertedSet;
+                for (int k = 1; k <= 127; ++k) {  // All printable ASCII (skip NUL)
+                    if (set.find((char)k) == set.end()) {
+                        invertedSet.insert((char)k);
+                    }
+                }
+                set = invertedSet;
+            }
+            
             tokens.push_back(Token(set));
+        } else if (c == '^') {
+            // Start-of-line anchor
+            tokens.push_back(Token(c, BOL));
+        } else if (c == '$') {
+            // End-of-line anchor
+            tokens.push_back(Token(c, EOL));
         } else if (c == '(' || c == ')' || c == '*' || c == '+' || c == '?' || c == '|') {
             tokens.push_back(Token(c, OPERATOR));
         } else if (c == '.') {

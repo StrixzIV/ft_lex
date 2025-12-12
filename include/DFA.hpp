@@ -27,10 +27,14 @@ struct DFAState {
     bool isAccepting;
     int priority; // Winning priority
     std::string action;
+    
+    // Anchor flags - carried from NFA accepting states
+    bool bolAnchored;  // Pattern requires start-of-line (^)
+    bool eolAnchored;  // Pattern requires end-of-line ($)
 
     std::map<char, std::shared_ptr<DFAState>> transitions;
 
-    DFAState(int id) : id(id), isAccepting(false), priority(-1) {}
+    DFAState(int id) : id(id), isAccepting(false), priority(-1), bolAnchored(false), eolAnchored(false) {}
 };
 
 class DFA {

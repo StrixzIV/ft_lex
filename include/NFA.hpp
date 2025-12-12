@@ -26,10 +26,14 @@ struct State {
     int priority; // -1 for non-accepting, otherwise rule index (lower is better)
     std::string action;
     
+    // Anchor flags - set on accepting states
+    bool bolAnchored;  // Pattern requires start-of-line (^)
+    bool eolAnchored;  // Pattern requires end-of-line ($)
+    
     std::multimap<char, std::shared_ptr<State>> transitions; // Char trantisions
     std::vector<std::shared_ptr<State>> epsilonTransitions;  // Epsilon transitions
 
-    State(int id) : id(id), isAccepting(false), priority(-1) {}
+    State(int id) : id(id), isAccepting(false), priority(-1), bolAnchored(false), eolAnchored(false) {}
 };
 
 class NFA {

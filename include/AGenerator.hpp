@@ -6,7 +6,7 @@
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/13 01:11:33 by jikaewsi          #+#    #+#             */
-/*   Updated: 2025/12/13 01:26:07 by jikaewsi         ###   ########.fr       */
+/*   Updated: 2025/12/13 03:19:11 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,7 +32,7 @@ class AGenerator {
     protected:
 
         virtual std::string generateHeader(const LexerParser &parser) = 0;
-        virtual std::string generateTables(const DFA &dfa) = 0;
+        virtual std::string generateTables(const DFA &dfa, const LexerParser &parser) = 0;
         virtual std::string generateLexerBody(const LexerParser &parser) = 0;
         virtual std::string generateUserCode(const LexerParser &parser) = 0;
         

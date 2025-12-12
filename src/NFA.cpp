@@ -25,6 +25,21 @@ NFA NFA::fromRegex(const std::vector<Token> &postfix, int &stateCounter) {
             stack.push(makeChar(token.c, stateCounter));
         } else if (token.type == CHARSET) {
             stack.push(makeSet(token.charSet, stateCounter));
+        } else if (token.type == BOL) {
+            // BOL anchor: create a marker state that will flag the NFA as BOL-anchored
+            // We create an epsilon-only NFA that marks the final state
+            auto start = std::make_shared<State>(stateCounter++);
+            auto end = std::make_shared<State>(stateCounter++);
+            start->epsilonTransitions.push_back(end);
+            end->bolAnchored = true;  // Mark this path as BOL-anchored
+            stack.push(NFA(start, end));
+        } else if (token.type == EOL) {
+            // EOL anchor: similar to BOL, marks the path as requiring end-of-line
+            auto start = std::make_shared<State>(stateCounter++);
+            auto end = std::make_shared<State>(stateCounter++);
+            start->epsilonTransitions.push_back(end);
+            end->eolAnchored = true;  // Mark this path as EOL-anchored
+            stack.push(NFA(start, end));
         } else if (token.type == OPERATOR) {
             switch (token.c) {
                 case RegexParser::CONCAT_OP: {

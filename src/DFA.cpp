@@ -34,7 +34,7 @@ DFA DFA::fromNFA(const NFA &nfa, int &dfaStateCounter) {
     }
     startDFA->nfaStates = startIds;
 
-    // Check acceptance
+    // Check acceptance and anchor flags
     int winningPriority = -1;
     for (const auto &s : startSet) {
         if (s->isAccepting) {
@@ -43,8 +43,13 @@ DFA DFA::fromNFA(const NFA &nfa, int &dfaStateCounter) {
                 startDFA->isAccepting = true;
                 startDFA->priority = s->priority;
                 startDFA->action = s->action;
+                startDFA->bolAnchored = s->bolAnchored;
+                startDFA->eolAnchored = s->eolAnchored;
             }
         }
+        // Propagate anchor flags from any state in the closure
+        if (s->bolAnchored) startDFA->bolAnchored = true;
+        if (s->eolAnchored) startDFA->eolAnchored = true;
     }
     
     dfa.start = startDFA;
@@ -121,7 +126,7 @@ DFA DFA::fromNFA(const NFA &nfa, int &dfaStateCounter) {
                 auto newDFA = std::make_shared<DFAState>(dfaStateCounter++);
                 newDFA->nfaStates = nextIds;
                 
-                // Acceptance logic
+                // Acceptance and anchor logic
                 int winP = -1;
                 for (const auto &s : closureSet) {
                     if (s->isAccepting) {
@@ -130,8 +135,13 @@ DFA DFA::fromNFA(const NFA &nfa, int &dfaStateCounter) {
                             newDFA->isAccepting = true;
                             newDFA->priority = s->priority;
                             newDFA->action = s->action;
+                            newDFA->bolAnchored = s->bolAnchored;
+                            newDFA->eolAnchored = s->eolAnchored;
                         }
                     }
+                    // Propagate anchor flags from any state in the closure
+                    if (s->bolAnchored) newDFA->bolAnchored = true;
+                    if (s->eolAnchored) newDFA->eolAnchored = true;
                 }
 
                 dfa.states.push_back(newDFA);

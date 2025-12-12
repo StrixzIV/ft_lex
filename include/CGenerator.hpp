@@ -6,7 +6,7 @@
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/13 01:13:32 by jikaewsi          #+#    #+#             */
-/*   Updated: 2025/12/13 01:26:03 by jikaewsi         ###   ########.fr       */
+/*   Updated: 2025/12/13 03:19:34 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@ class CGenerator: public AGenerator {
 
     protected:
         std::string generateHeader(const LexerParser &parser) override;
-        std::string generateTables(const DFA &dfa) override;
+        std::string generateTables(const DFA &dfa, const LexerParser &parser) override;
         std::string generateLexerBody(const LexerParser &parser) override;
         std::string generateUserCode(const LexerParser &parser) override;
 

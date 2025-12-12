@@ -6,7 +6,7 @@
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/13 01:30:45 by jikaewsi          #+#    #+#             */
-/*   Updated: 2025/12/13 02:25:54 by jikaewsi         ###   ########.fr       */
+/*   Updated: 2025/12/13 03:20:51 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,6 +25,18 @@ std::string PythonGenerator::generateHeader(const LexerParser &parser) {
     ss << "# Definitions Section\n";
     ss << parser.getDefinitions() << "\n\n";
     
+    // Emit start condition constants
+    const auto &startConditions = parser.getStartConditions();
+    if (!startConditions.empty()) {
+        ss << "# Start Condition Constants\n";
+        ss << "INITIAL = 0\n";
+        int conditionIndex = 1;
+        for (const auto &cond : startConditions) {
+            ss << cond.name << " = " << conditionIndex++ << "\n";
+        }
+        ss << "\n";
+    }
+    
     ss << "class Token:\n";
     ss << "    def __init__(self, type, text):\n";
     ss << "        self.type = type\n";
@@ -34,7 +46,8 @@ std::string PythonGenerator::generateHeader(const LexerParser &parser) {
 
 }
 
-std::string PythonGenerator::generateTables(const DFA &dfa) {
+std::string PythonGenerator::generateTables(const DFA &dfa, const LexerParser &parser) {
+    (void)parser;  // TODO: Add anchor tables for Python generator
 
     std::stringstream ss;
     

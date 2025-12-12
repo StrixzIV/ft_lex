@@ -6,7 +6,7 @@
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/11 02:12:59 by jikaewsi          #+#    #+#             */
-/*   Updated: 2025/12/11 02:12:59 by jikaewsi         ###   ########.fr       */
+/*   Updated: 2025/12/13 02:41:59 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,9 @@
 enum TokenType { 
     CHAR, 
     OPERATOR, 
-    CHARSET 
+    CHARSET,
+    BOL,  // Beginning of line anchor (^)
+    EOL   // End of line anchor ($)
 };
 
 struct Token {

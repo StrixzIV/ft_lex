@@ -17,6 +17,16 @@ __TABLES_PLACEHOLDER__
         self.yytext = ""
         self.yyleng = 0
         self.pushback_buffer = []  # Stack for unreading characters
+        self._yy_more_flag = False
+        self._yy_more_len = 0
+        
+        # Start conditions
+        self.INITIAL = 0
+        self.yy_start = 0  # Current start condition
+    
+    def BEGIN(self, state):
+        """Switch to a different start condition."""
+        self.yy_start = state
 
     def read_char(self):
         """Reads one character from the input stream."""
@@ -29,6 +39,36 @@ __TABLES_PLACEHOLDER__
         """Puts back one character for later reading."""
         if char is not None:
             self.pushback_buffer.append(char)
+
+    # --- POSIX Scanner Functions ---
+    
+    def input(self):
+        """Read next character from input. Returns empty string on EOF."""
+        c = self.read_char()
+        return c if c else ''
+    
+    def unput(self, c):
+        """Push character back onto input stream."""
+        if c:
+            self.unread_char(c)
+    
+    def yymore(self):
+        """Set flag to append next token to current yytext."""
+        self._yy_more_flag = True
+    
+    def yyless(self, n):
+        """Return all but first n characters to input stream."""
+        # Push back excess characters in reverse order
+        for i in range(len(self.yytext) - 1, n - 1, -1):
+            self.unread_char(self.yytext[i])
+        self.yytext = self.yytext[:n]
+        self.yyleng = n
+    
+    def REJECT(self):
+        """Try next best matching rule.
+        NOTE: Full REJECT requires generator-level support.
+        This sets a flag that the yylex driver should check."""
+        self._yy_reject_flag = True
 
     def yylex(self):
         """

@@ -24,6 +24,14 @@ public:
     struct Rule {
         std::string regex;
         std::string action;
+        std::vector<std::string> startConditions;  // Empty means all conditions (INITIAL + inclusive)
+        bool bolAnchored = false;  // Starts with ^
+        bool eolAnchored = false;  // Ends with $
+    };
+    
+    struct StartCondition {
+        std::string name;
+        bool exclusive;  // true for %x, false for %s
     };
 
     LexerParser(const std::string &filename);
@@ -35,6 +43,7 @@ public:
     const std::string &getRules() const;
     const std::string &getUserCode() const;
     const std::vector<Rule> &getRulesList() const;
+    const std::vector<StartCondition> &getStartConditions() const;
     
 private:
     std::string _filename;
@@ -43,9 +52,11 @@ private:
     std::string _rules;
     std::string _userCode;
     std::vector<Rule> _rulesList;
+    std::vector<StartCondition> _startConditions;
 
     void _readFile();
     void _splitSections();
+    void _parseDefinitions();
     void _parseRules();
 
 };

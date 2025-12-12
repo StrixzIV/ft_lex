@@ -6,7 +6,7 @@
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/13 01:23:08 by jikaewsi          #+#    #+#             */
-/*   Updated: 2025/12/13 01:45:06 by jikaewsi         ###   ########.fr       */
+/*   Updated: 2025/12/13 03:19:22 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,7 +65,7 @@ void AGenerator::generate(const DFA &dfa, const LexerParser &parser, std::ostrea
     std::string output_code = loadTemplate(template_key);
 
     std::string header = generateHeader(parser);
-    std::string tables = generateTables(dfa);
+    std::string tables = generateTables(dfa, parser);
     std::string lexer_body = generateLexerBody(parser);
     std::string user_code = generateUserCode(parser);
 
