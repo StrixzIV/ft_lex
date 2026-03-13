@@ -53,41 +53,61 @@ int main(int argc, char** argv) {
         parser.parse();
 
         int stateCounter = 0;
-        auto masterStart = std::make_shared<State>(stateCounter++);
-        std::vector<NFA> allNFAs;
-
-        std::cout << "Parsed " << parser.getRulesList().size() << " rules:\n";
-        
-        int priority = 0;
-        for (const auto& rule : parser.getRulesList()) {
-            std::vector<Token> postfix = RegexParser::toPostfix(rule.regex);
-            
-            try {
-                NFA nfa = NFA::fromRegex(postfix, stateCounter);
-                
-                // Configure accepting state
-                nfa.accept->isAccepting = true;
-                nfa.accept->priority = priority++;
-                nfa.accept->action = rule.action;
-                
-                // Connect master start to nfa start
-                masterStart->epsilonTransitions.push_back(nfa.start);
-                
-                allNFAs.push_back(nfa);
-            } catch (const std::exception& e) {
-                std::cout << " -> NFA Error: " << e.what() << "\n";
-            }
-        }
-        
-        auto dummyAccept = std::make_shared<State>(stateCounter++);
-        NFA masterNFA(masterStart, dummyAccept);
-        
-        std::cout << "Master NFA created (" << stateCounter << " states total).\n";
-
         int dfaStateCounter = 0;
-        DFA dfa = DFA::fromNFA(masterNFA, dfaStateCounter);
-        
-        std::cout << "DFA Construction Complete: " << dfa.states.size() << " states.\n";
+        std::vector<DFA> dfas;
+
+        const auto& startConds = parser.getStartConditions();
+        std::cout << "Parsed " << parser.getRulesList().size() << " rules across " << startConds.size() << " start conditions.\n";
+
+        for (size_t c_idx = 0; c_idx < startConds.size(); ++c_idx) {
+            auto masterStart = std::make_shared<State>(stateCounter++);
+            
+            int priority = 0;
+            for (const auto& rule : parser.getRulesList()) {
+                
+                // Check if this rule applies to the current start condition
+                bool applies = false;
+                if (rule.startConditions.empty()) {
+                    if (!startConds[c_idx].isExclusive) applies = true;
+                } else {
+                    for (const auto& sc : rule.startConditions) {
+                        if (sc == "*" || sc == startConds[c_idx].name) {
+                            applies = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!applies) {
+                    priority++; // essential: keep rule index aligned with priority
+                    continue;
+                }
+
+                std::vector<Token> postfix = RegexParser::toPostfix(rule.regex);
+                
+                try {
+                    NFA nfa = NFA::fromRegex(postfix, stateCounter);
+                    // Configure accepting state
+                    nfa.accept->isAccepting = true;
+                    nfa.accept->priority = priority; 
+                    nfa.accept->action = rule.action;
+                    
+                    // Connect master start to nfa start
+                    masterStart->epsilonTransitions.push_back(nfa.start);
+                } catch (const std::exception& e) {
+                    std::cout << " -> NFA Error: " << e.what() << "\n";
+                }
+
+                priority++;
+            }
+            
+            auto dummyAccept = std::make_shared<State>(stateCounter++);
+            NFA masterNFA(masterStart, dummyAccept);
+            DFA dfa = DFA::fromNFA(masterNFA, dfaStateCounter);
+            dfas.push_back(dfa);
+            
+            std::cout << "Start Condition '" << startConds[c_idx].name << "': " << dfa.states.size() << " DFA states.\n";
+        }
     
         std::unique_ptr<AGenerator> generator;
 
@@ -102,14 +122,13 @@ int main(int argc, char** argv) {
         else {
             throw std::runtime_error("Unsupported target language '" + target_lang + "'. Use 'c' or 'python'.");
         }
-
-        std::ofstream outfile(output_filename);
         
-        if (!outfile.is_open()) {
-            throw std::runtime_error("Could not create " + output_filename);
+        std::ofstream outfile(output_filename);
+        if (!outfile) {
+            throw std::runtime_error("Could not open output file: " + output_filename);
         }
         
-        generator->generate(dfa, parser, outfile); 
+        generator->generate(dfas, parser, outfile);
         
         outfile.close();
         std::cout << "Generated " << output_filename << " successfully.\n";

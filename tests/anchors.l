@@ -1,10 +1,8 @@
-/* Test anchors: ^ (BOL) and $ (EOL) */
 %%
-^hello      { printf("[BOL_HELLO]"); }
-world$      { printf("[WORLD_EOL]"); }
-^test$      { printf("[BOTH_TEST]"); }
-[a-z]+      { printf("[WORD:%s]", yytext); }
-[ \t]+      { /* skip whitespace */ }
-\n          { printf("[NL]"); }
-.           { printf("[OTHER:%s]", yytext); }
+^test        { printf("START[%s]\n", yytext); }
+end$         { printf("END[%s]\n", yytext); }
+^both$       { printf("BOTH[%s]\n", yytext); }
+[a-zA-Z]+    { printf("WORD[%s]\n", yytext); }
+\n           { printf("NEWLINE\n"); }
+.            { /* ignore */ }
 %%

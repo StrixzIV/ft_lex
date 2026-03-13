@@ -26,8 +26,11 @@ struct State {
     int priority; // -1 for non-accepting, otherwise rule index (lower is better)
     std::string action;
     
-    std::multimap<char, std::shared_ptr<State>> transitions; // Char trantisions
-    std::vector<std::shared_ptr<State>> epsilonTransitions;  // Epsilon transitions
+    // Transitions on specific characters (or pseudo-chars > 255)
+    std::map<int, std::shared_ptr<State>> transitions;
+    
+    // Epsilon transitions (\epsilon)
+    std::vector<std::shared_ptr<State>> epsilonTransitions;
 
     State(int id) : id(id), isAccepting(false), priority(-1) {}
 };
@@ -44,8 +47,8 @@ public:
     static NFA fromRegex(const std::vector<Token> &postfix, int &stateCounter);
     
     // Operations
-    static NFA makeChar(char c, int &stateCounter);
-    static NFA makeSet(const std::set<char> &chars, int &stateCounter);
+    static NFA makeChar(int c, int &stateCounter);
+    static NFA makeSet(const std::set<int> &chars, int &stateCounter);
     static NFA makeConcat(NFA left, NFA right);
     static NFA makeUnion(NFA top, NFA bottom, int &stateCounter);
     static NFA makeKleene(NFA nfa, int &stateCounter);

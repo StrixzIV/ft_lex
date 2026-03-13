@@ -50,7 +50,7 @@ std::string AGenerator::loadTemplate(const std::string& template_key) {
 
 }
 
-void AGenerator::generate(const DFA &dfa, const LexerParser &parser, std::ostream &out) {
+void AGenerator::generate(const std::vector<DFA> &dfas, const LexerParser &parser, std::ostream &out) {
 
     std::string template_key = "Unknown";
 
@@ -65,7 +65,7 @@ void AGenerator::generate(const DFA &dfa, const LexerParser &parser, std::ostrea
     std::string output_code = loadTemplate(template_key);
 
     std::string header = generateHeader(parser);
-    std::string tables = generateTables(dfa);
+    std::string tables = generateTables(dfas, parser);
     std::string lexer_body = generateLexerBody(parser);
     std::string user_code = generateUserCode(parser);
 

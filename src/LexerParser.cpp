@@ -15,7 +15,9 @@
 #include <sstream>
 #include <iostream>
 
-LexerParser::LexerParser(const std::string &filename) : _filename(filename) {}
+LexerParser::LexerParser(const std::string &filename) : _filename(filename) {
+    _startConditions.push_back({"INITIAL", false}); // Default start condition
+}
 
 const std::string &LexerParser::getDefinitions() const {
     return _definitions;
@@ -97,6 +99,10 @@ const std::map<std::string, std::string> &LexerParser::getNamedDefinitions() con
     return _namedDefinitions;
 }
 
+const std::vector<LexerParser::StartCondition> &LexerParser::getStartConditions() const {
+    return _startConditions;
+}
+
 void LexerParser::_parseDefinitions() {
     // Parse lines in the definitions section that are NOT inside %{ %} blocks.
     // Lines of the form:  NAME  regex
@@ -128,9 +134,19 @@ void LexerParser::_parseDefinitions() {
         // Skip empty lines and comment lines
         if (trimmed.empty() || trimmed[0] == '/' || trimmed[0] == '#')
             continue;
-        // Skip start condition declarations (%s, %x)
-        if (trimmed[0] == '%')
+            
+        // Parse start condition declarations (%s, %x)
+        if (trimmed[0] == '%') {
+            if (trimmed.size() > 1 && (trimmed[1] == 's' || trimmed[1] == 'x')) {
+                bool isExclusive = (trimmed[1] == 'x');
+                std::istringstream varStream(trimmed.substr(2));
+                std::string condName;
+                while (varStream >> condName) {
+                    _startConditions.push_back({condName, isExclusive});
+                }
+            }
             continue;
+        }
 
         // Check if line looks like: NAME<whitespace>regex
         // NAME must start with letter or underscore
@@ -208,6 +224,37 @@ void LexerParser::_parseRules() {
         if (trimmed.empty())
             continue;
 
+        Rule rule;
+
+        // --- Extract State Prefix <STATE1,STATE2> ---
+        if (trimmed[0] == '<') {
+            size_t endAngle = trimmed.find('>');
+            if (endAngle != std::string::npos) {
+                std::string statesStr = trimmed.substr(1, endAngle - 1);
+                std::istringstream ss(statesStr);
+                std::string state;
+                while (std::getline(ss, state, ',')) {
+                    // Trim whitespace
+                    size_t start = state.find_first_not_of(" \t");
+                    size_t end = state.find_last_not_of(" \t");
+                    if (start != std::string::npos && end != std::string::npos) {
+                        rule.startConditions.push_back(state.substr(start, end - start + 1));
+                    }
+                }
+                
+                // Shift trimmed string past the angle brackets
+                size_t nextChar = trimmed.find_first_not_of(" \t", endAngle + 1);
+                if (nextChar != std::string::npos) {
+                    trimmed = trimmed.substr(nextChar);
+                } else {
+                    trimmed = "";
+                }
+            }
+        }
+
+        if (trimmed.empty())
+            continue;
+
         // --- Extract the regex pattern ---
         // We must skip over [...] character classes and "..." quoted strings
         // because they can contain spaces.
@@ -258,7 +305,6 @@ void LexerParser::_parseRules() {
             i++;
         }
         
-        Rule rule;
         rule.regex = trimmed.substr(0, i);
         
         if (rule.regex.empty())

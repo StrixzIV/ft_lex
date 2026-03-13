@@ -13,6 +13,11 @@ char *yytext   = NULL;
 int   yyleng   = 0;
 int   yylineno = 1;
 
+/* Current start condition (defaults to 0 / INITIAL) */
+int   yy_start = 0;
+int yy_at_bol = 1; // 1 if we are at the beginning of a line
+#define BEGIN(state) (yy_start = (state))
+
 /* Dynamic input buffer */
 static char  *yy_buffer    = NULL;
 static int    yy_buf_len   = 0;
@@ -74,7 +79,7 @@ int yylex(void) {
 
     while (1) {
 
-        current_state = 0;
+        current_state = yy_start_state_idx[yy_start];
         last_accepting_state = -1;
 
         int buf_idx = 0;
@@ -91,15 +96,40 @@ int yylex(void) {
         /* Read first char */
         c = fgetc(yyin);
         if (c == EOF) {
-            if (yywrap())
-                return 0;
-            continue;
+            int ret = yywrap();
+            if (ret != 0) {
+                return 0; // EOF reached and yywrap says stop
+            }
+            continue; // Retry reading if yywrap swapped the file
         }
-        if (c == '\n')
-            yylineno++;
 
+        /* Check for Start of Line Anchor (256) */
+        if (yy_at_bol) {
+            int anchor_state = yy_nxt[current_state][256];
+            if (anchor_state != -1) {
+                current_state = anchor_state;
+                if (yy_accept[current_state] != -1) {
+                    last_accepting_state = current_state;
+                    last_accepting_idx = buf_idx;
+                }
+            }
+        }
+
+        /* Push char to buffer */
         yy_buffer[buf_idx++] = (char)c;
         yy_buffer[buf_idx] = '\0';
+
+        /* Check for End of Line Anchor (257) on '\n' */
+        if (c == '\n') {
+            int eol_state = yy_nxt[current_state][257];
+            if (eol_state != -1) {
+                if (yy_accept[eol_state] != -1) {
+                    // Match found before the '\n'
+                    last_accepting_state = eol_state;
+                    last_accepting_idx = buf_idx - 1;
+                }
+            }
+        }
 
         /* Initial transition */
         next_state = yy_nxt[current_state][(unsigned char)c];
@@ -114,14 +144,32 @@ int yylex(void) {
             }
 
             c = fgetc(yyin);
-            if (c == EOF)
+            if (c == EOF) {
+                /* Check for End of Line Anchor (257) on EOF */
+                int eol_state = yy_nxt[current_state][257];
+                if (eol_state != -1) {
+                    if (yy_accept[eol_state] != -1) {
+                        last_accepting_state = eol_state;
+                        last_accepting_idx = buf_idx;
+                    }
+                }
                 break;
-            if (c == '\n')
-                yylineno++;
+            }
 
             yy_buf_ensure(buf_idx + 2);
             yy_buffer[buf_idx++] = (char)c;
             yy_buffer[buf_idx] = '\0';
+
+            /* Check for End of Line Anchor (257) on '\n' */
+            if (c == '\n') {
+                int eol_state = yy_nxt[current_state][257];
+                if (eol_state != -1) {
+                    if (yy_accept[eol_state] != -1) {
+                        last_accepting_state = eol_state;
+                        last_accepting_idx = buf_idx - 1;
+                    }
+                }
+            }
 
             next_state = yy_nxt[current_state][(unsigned char)c];
         }
@@ -130,15 +178,26 @@ int yylex(void) {
         if (last_accepting_state != -1) {
             /* Match found — push back characters past the match */
             while (buf_idx > last_accepting_idx) {
-                char ch = yy_buffer[--buf_idx];
-                if (ch == '\n')
-                    yylineno--;
-                ungetc((unsigned char)ch, yyin);
+                int ch = (unsigned char)yy_buffer[--buf_idx];
+                ungetc(ch, yyin);
             }
             yy_buffer[buf_idx] = '\0';
+            
+            // Re-calc yylineno based on actual matched chars
+            for (int i = 0; i < buf_idx; i++) {
+                if (yy_buffer[i] == '\n')
+                    yylineno++;
+            }
 
             yytext = yy_buffer;
             yyleng = buf_idx;
+
+            // Update yy_at_bol
+            if (yyleng > 0 && yytext[yyleng - 1] == '\n') {
+                yy_at_bol = 1;
+            } else if (yyleng > 0) {
+                yy_at_bol = 0;
+            }
 
             /* Save the hold char for input()/unput()/yyless() */
             yy_hold_char = yy_buffer[yyleng];
@@ -159,12 +218,20 @@ __YYLEX_BODY_PLACEHOLDER__
             }
         } else {
             /* No match — ECHO first char, push back the rest */
+            if (buf_idx == 0) {
+                 // Should never happen, but safety override
+                 break;
+            }
             fputc((unsigned char)yy_buffer[0], yyout);
             while (buf_idx > 1) {
                 char ch = yy_buffer[--buf_idx];
-                if (ch == '\n')
-                    yylineno--;
                 ungetc((unsigned char)ch, yyin);
+            }
+            if (yy_buffer[0] == '\n') {
+                yy_at_bol = 1;
+                yylineno++;
+            } else {
+                yy_at_bol = 0;
             }
         }
     }

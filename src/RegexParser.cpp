@@ -23,7 +23,7 @@ std::vector<Token> RegexParser::toPostfix(const std::string &regex) {
     std::stack<Token> operators;
 
     for (const auto &token : explicitConcat) {
-        if (token.type == CHAR || token.type == CHARSET) {
+        if (token.type == CHAR || token.type == CHARSET || token.type == ANCHOR_START || token.type == ANCHOR_END) {
             postfix.push_back(token);
         } else if (token.type == OPERATOR) {
             if (token.c == '(') {
@@ -57,8 +57,30 @@ std::vector<Token> RegexParser::toPostfix(const std::string &regex) {
 
 std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
     std::vector<Token> tokens;
-    for (size_t i = 0; i < regex.size(); ++i) {
+    
+    // Explicit Trailing Context `/` tokenization logic (future-proofing)
+    size_t len = regex.size();
+    
+    for (size_t i = 0; i < len; ++i) {
         char c = regex[i];
+
+        // Line Anchors
+        if (i == 0 && c == '^') {
+            tokens.push_back(Token('^', ANCHOR_START));
+            continue;
+        }
+        if (i == len - 1 && c == '$') {
+            // Check if it's escaped (simple heuristic: if previous is backslash but wait, double backslash?)
+            // A more robust way: count backslashes before $
+            int bsCount = 0;
+            for (int k = i - 1; k >= 0 && regex[k] == '\\'; --k) {
+                bsCount++;
+            }
+            if (bsCount % 2 == 0) {
+                tokens.push_back(Token('$', ANCHOR_END));
+                continue;
+            }
+        }
 
         if (c == '\\') {
             if (i + 1 < regex.size()) {
@@ -84,7 +106,7 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
             }
         } else if (c == '[') {
             // Parse character set
-            std::set<char> set;
+            std::set<int> set;
             i++;
             // TODO: Handle negation [^...]
             bool first = true;
@@ -180,7 +202,7 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
             tokens.push_back(Token(c, OPERATOR));
         } else if (c == '.') {
              // Dot is a special charset (all except \n)
-             std::set<char> dotSet;
+             std::set<int> dotSet;
              for (int k = -128; k <= 127; ++k) {
                  if ((char)k != '\n') {
                      dotSet.insert((char)k);
@@ -203,8 +225,8 @@ std::vector<Token> RegexParser::_addExplicitConcat(const std::vector<Token> &tok
             const Token &curr = tokens[i];
             const Token &next = tokens[i+1];
             
-            bool currIsOperand = (curr.type == CHAR || curr.type == CHARSET || (curr.type == OPERATOR && (curr.c == ')' || curr.c == '*' || curr.c == '+' || curr.c == '?')));
-            bool nextIsOperand = (next.type == CHAR || next.type == CHARSET || (next.type == OPERATOR && next.c == '('));
+            bool currIsOperand = (curr.type == CHAR || curr.type == CHARSET || curr.type == ANCHOR_START || curr.type == ANCHOR_END || (curr.type == OPERATOR && (curr.c == ')' || curr.c == '*' || curr.c == '+' || curr.c == '?')));
+            bool nextIsOperand = (next.type == CHAR || next.type == CHARSET || next.type == ANCHOR_END || (next.type == OPERATOR && next.c == '('));
 
             if (currIsOperand && nextIsOperand) {
                 result.push_back(Token(CONCAT_OP, OPERATOR));

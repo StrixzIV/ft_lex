@@ -19,16 +19,18 @@
 enum TokenType { 
     CHAR, 
     OPERATOR, 
-    CHARSET 
+    CHARSET,
+    ANCHOR_START, // Acts like prepending ^ to a regex
+    ANCHOR_END    // Acts like appending $ to a regex
 };
 
 struct Token {
     TokenType type;
-    char c;
-    std::set<char> charSet;
+    int c; // Changed to int to allow values > 255 for anchors
+    std::set<int> charSet; // Changed to set<int>
     
-    Token(char c, TokenType type) : type(type), c(c) {}
-    Token(std::set<char> set) : type(CHARSET), c(0), charSet(set) {}
+    Token(int c, TokenType type) : type(type), c(c) {}
+    Token(std::set<int> set) : type(CHARSET), c(0), charSet(set) {}
 };
 
 #endif

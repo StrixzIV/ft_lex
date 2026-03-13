@@ -25,6 +25,10 @@ NFA NFA::fromRegex(const std::vector<Token> &postfix, int &stateCounter) {
             stack.push(makeChar(token.c, stateCounter));
         } else if (token.type == CHARSET) {
             stack.push(makeSet(token.charSet, stateCounter));
+        } else if (token.type == ANCHOR_START) {
+            stack.push(makeChar(256, stateCounter));
+        } else if (token.type == ANCHOR_END) {
+            stack.push(makeChar(257, stateCounter));
         } else if (token.type == OPERATOR) {
             switch (token.c) {
                 case RegexParser::CONCAT_OP: {
@@ -81,17 +85,17 @@ NFA NFA::fromRegex(const std::vector<Token> &postfix, int &stateCounter) {
 
 }
 
-NFA NFA::makeSet(const std::set<char> &chars, int &stateCounter) {
+NFA NFA::makeSet(const std::set<int> &chars, int &stateCounter) {
     auto start = std::make_shared<State>(stateCounter++);
     auto end = std::make_shared<State>(stateCounter++);
     
-    for (char c : chars) {
+    for (int c : chars) {
         start->transitions.insert({c, end});
     }
     return NFA(start, end);
 }
 
-NFA NFA::makeChar(char c, int &stateCounter) {
+NFA NFA::makeChar(int c, int &stateCounter) {
     auto start = std::make_shared<State>(stateCounter++);
     auto end = std::make_shared<State>(stateCounter++);
     start->transitions.insert({c, end});

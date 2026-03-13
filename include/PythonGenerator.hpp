@@ -24,7 +24,7 @@ class PythonGenerator: public AGenerator {
     
     protected:
         std::string generateHeader(const LexerParser &parser) override;
-        std::string generateTables(const DFA &dfa) override;
+        std::string generateTables(const std::vector<DFA> &dfas, const LexerParser &parser) override;
         std::string generateLexerBody(const LexerParser &parser) override;
         std::string generateUserCode(const LexerParser &parser) override;
 

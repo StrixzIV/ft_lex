@@ -26,13 +26,13 @@ class PythonGenerator;
 class AGenerator {
 
     public:
-        void generate(const DFA &dfa, const LexerParser &parser, std::ostream &out);
+        void generate(const std::vector<DFA> &dfas, const LexerParser &parser, std::ostream &out);
         virtual ~AGenerator() = default;
 
     protected:
 
         virtual std::string generateHeader(const LexerParser &parser) = 0;
-        virtual std::string generateTables(const DFA &dfa) = 0;
+        virtual std::string generateTables(const std::vector<DFA> &dfas, const LexerParser &parser) = 0;
         virtual std::string generateLexerBody(const LexerParser &parser) = 0;
         virtual std::string generateUserCode(const LexerParser &parser) = 0;
         

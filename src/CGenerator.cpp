@@ -30,56 +30,72 @@ std::string CGenerator::generateHeader(const LexerParser &parser) {
 
 }
 
-std::string CGenerator::generateTables(const DFA &dfa) {
-    
+std::string CGenerator::generateTables(const std::vector<DFA> &dfas, const LexerParser &parser) {
     std::stringstream ss;
-    ss << "/* DFA Tables */\n";
-    
-    size_t stateCount = dfa.states.size();
-    
-    std::map<int, int> idToIndex;
-    for (size_t i = 0; i < stateCount; ++i) {
-        idToIndex[dfa.states[i]->id] = i;
+    ss << "/* Start Conditions Definitions */\n";
+    const auto& startConds = parser.getStartConditions();
+    for (size_t i = 0; i < startConds.size(); ++i) {
+        ss << "#define " << startConds[i].name << " " << i << "\n";
     }
+    ss << "\n";
+
+    ss << "/* DFA Tables */\n";
+    size_t totalStates = 0;
+    for (const auto& dfa : dfas) {
+        totalStates += dfa.states.size();
+    }
+    
+    std::map<int, int> idToIndex; // Global ID to Index (0 to totalStates-1)
+    int currentIndex = 0;
+    
+    ss << "static const int yy_start_state_idx[" << dfas.size() << "] = {\n    ";
+    for (const auto& dfa : dfas) {
+        // Find the index of the start state for this DFA
+        // The start state is the first one generated usually, but to be sure:
+        // Actually, we just map everything sequentially. We must ensure dfa.start->id is what we index.
+        // Wait, dfa.start is just ONE of the states in dfa.states.
+        // Let's populate idToIndex first:
+        for (const auto& state : dfa.states) {
+            idToIndex[state->id] = currentIndex++;
+        }
+    }
+    
+    for (const auto& dfa : dfas) {
+        ss << idToIndex[dfa.start->id] << ", ";
+    }
+    ss << "\n};\n\n";
     
     // Transition Table: C array format
-    ss << "static const int yy_nxt[" << stateCount << "][256] = {\n";
-    for (size_t i = 0; i < stateCount; ++i) {
-        auto state = dfa.states[i];
-        ss << "    {";
-        for (int c = 0; c < 256; ++c) {
-            char ch = (char)c;
-            int nextIdx = -1;
-            if (state->transitions.count(ch)) {
-                nextIdx = idToIndex[state->transitions.at(ch)->id];
+    ss << "static const int yy_nxt[" << totalStates << "][258] = {\n";
+    for (const auto& dfa : dfas) {
+        for (const auto& state : dfa.states) {
+            ss << "    {";
+            for (int c = 0; c < 258; ++c) {
+                int nextIdx = -1;
+                if (state->transitions.count(c)) {
+                    nextIdx = idToIndex[state->transitions.at(c)->id];
+                }
+                ss << nextIdx << ",";
             }
-            ss << nextIdx << ",";
+            ss << "},\n";
         }
-        ss << "},\n";
     }
-    
     ss << "};\n\n";
 
     // Accepting State Table: C array format
-    ss << "static const int yy_accept[" << stateCount << "] = {\n    ";
-    
-    for (size_t i = 0; i < stateCount; ++i) {
-        
-        auto state = dfa.states[i];
-        
-        if (state->isAccepting) {
-            ss << state->priority << ", ";
-        } 
-        
-        else {
-            ss << "-1, ";
+    ss << "static const int yy_accept[" << totalStates << "] = {\n    ";
+    for (const auto& dfa : dfas) {
+        for (const auto& state : dfa.states) {
+            if (state->isAccepting) {
+                ss << state->priority << ", ";
+            } else {
+                ss << "-1, ";
+            }
         }
-
     }
-
     ss << "\n};\n\n";
-    return ss.str();
 
+    return ss.str();
 }
 
 // Public interface (calls helper)

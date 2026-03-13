@@ -34,70 +34,56 @@ std::string PythonGenerator::generateHeader(const LexerParser &parser) {
 
 }
 
-std::string PythonGenerator::generateTables(const DFA &dfa) {
+std::string PythonGenerator::generateTables(const std::vector<DFA> &dfas, const LexerParser &parser) {
 
+    (void)parser; // unused for now
     std::stringstream ss;
     
-    ss << "    # DFA Tables (Transition and Acceptance)\n";
+    ss << "# DFA Tables\n";
     
-    size_t stateCount = dfa.states.size();
+
+    
     std::map<int, int> idToIndex;
+    int currentIndex = 0;
     
-    for (size_t i = 0; i < stateCount; ++i) {
-        idToIndex[dfa.states[i]->id] = i;
+    for (const auto& dfa : dfas) {
+        for (const auto& state : dfa.states) {
+            idToIndex[state->id] = currentIndex++;
+        }
     }
     
-    // Transition Table (Python List of Lists)
-    ss << "    YY_NXT = [\n";
-    for (size_t i = 0; i < stateCount; ++i) {
-    
-        auto state = dfa.states[i];
-        
-        ss << "        [";
-        
-        for (int c = 0; c < 256; ++c) {
-    
-            char ch = (char)c;
-            int nextIdx = -1;
-    
-            if (state->transitions.count(ch)) {
-                nextIdx = idToIndex[state->transitions.at(ch)->id];
+    // Transition Table: Python list of lists
+    ss << "_nxt = [\n";
+    for (const auto& dfa : dfas) {
+        for (const auto& state : dfa.states) {
+            ss << "    [";
+            for (int c = 0; c < 258; ++c) {
+                int nextIdx = -1;
+                if (state->transitions.count(c)) {
+                    nextIdx = idToIndex[state->transitions.at(c)->id];
+                }
+                ss << nextIdx << ",";
             }
-    
-            ss << nextIdx;
-            if (c < 255) ss << ", ";
-    
+            ss << "],\n";
         }
-    
-        ss << "]";
-        if (i < stateCount - 1) ss << ",";
-        ss << "\n";
-    
-    }
-    
-    ss << "    ]\n\n";
-
-    // Accepting State Table (Python List)
-    ss << "    YY_ACCEPT = [";
-    
-    for (size_t i = 0; i < stateCount; ++i) {
-        
-        auto state = dfa.states[i];
-        
-        if (state->isAccepting) {
-            ss << state->priority;
-        }
-        
-        else {
-            ss << "-1";
-        }
-
-        if (i < stateCount - 1) ss << ", ";
-
     }
     
     ss << "]\n\n";
 
+    // Accepting State Table: Python list
+    ss << "_accept = [\n    ";
+    
+    for (const auto& dfa : dfas) {
+        for (const auto& state : dfa.states) {
+            if (state->isAccepting) {
+                ss << state->priority << ", ";
+            } else {
+                ss << "-1, ";
+            }
+        }
+    }
+
+    ss << "\n]\n\n";
     return ss.str();
 
 }
