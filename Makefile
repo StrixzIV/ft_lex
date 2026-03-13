@@ -21,7 +21,7 @@ SRCS        = $(wildcard $(SRC_DIR)/*.cpp)
 OBJS        = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS)) $(GENERATED_OBJ)
 
 LIBL_SRCS   = $(wildcard $(LIBL_DIR)/*.c)
-LIBL_OBJS   = $(patsubst $(LIBL_DIR)/%.c, $(OBJ_DIR)/%.o, $(LIBL_SRCS))
+LIBL_OBJS   = $(patsubst $(LIBL_DIR)/%.c, $(OBJ_DIR)/libl_%.o, $(LIBL_SRCS))
 
 all: clang $(NAME) $(LIBL)
 
@@ -50,7 +50,7 @@ $(LIBL): $(LIBL_OBJS)
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(OBJ_DIR)/%.o: $(LIBL_DIR)/%.c | $(OBJ_DIR)
+$(OBJ_DIR)/libl_%.o: $(LIBL_DIR)/%.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJ_DIR):

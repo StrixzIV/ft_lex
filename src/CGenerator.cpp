@@ -26,11 +26,6 @@ std::string CGenerator::generateHeader(const LexerParser &parser) {
     ss << "/* Definitions Section */\n";
     ss << parser.getDefinitions() << "\n\n";
     
-    ss << "char *yytext = NULL;\n";
-    ss << "int yyleng = 0;\n";
-    ss << "int yyin_fd = 0; // Default stdin\n";
-    ss << "\n";
-    
     return ss.str();
 
 }

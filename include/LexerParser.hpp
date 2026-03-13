@@ -16,6 +16,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <map>
 #include <stdexcept>
 
 class LexerParser {
@@ -35,6 +36,7 @@ public:
     const std::string &getRules() const;
     const std::string &getUserCode() const;
     const std::vector<Rule> &getRulesList() const;
+    const std::map<std::string, std::string> &getNamedDefinitions() const;
     
 private:
     std::string _filename;
@@ -42,10 +44,14 @@ private:
     std::string _definitions;
     std::string _rules;
     std::string _userCode;
+    std::string _rawDefinitions;
     std::vector<Rule> _rulesList;
+    std::map<std::string, std::string> _namedDefinitions;
 
     void _readFile();
     void _splitSections();
+    void _parseDefinitions();
+    std::string _expandDefinitions(const std::string &regex);
     void _parseRules();
 
 };
