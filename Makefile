@@ -2,7 +2,7 @@ NAME        = ft_lex
 LIBL        = libl.a
 
 CC          = clang
-CFLAGS      = -Wall -Wextra -Werror
+CFLAGS      = -Wall -Wextra -Werror -Ilibl
 
 CXX         = clang++
 CXXFLAGS    = -Wall -Wextra -Werror -std=c++17 -Iinclude

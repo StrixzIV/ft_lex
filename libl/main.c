@@ -5,15 +5,14 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/12/13 02:58:53 by jikaewsi          #+#    #+#             */
-/*   Updated: 2025/12/13 02:58:53 by jikaewsi         ###   ########.fr       */
+/*   Created: 2026/03/14 11:05:48 by jikaewsi          #+#    #+#             */
+/*   Updated: 2026/03/14 11:05:48 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-extern int yylex(void);
+#include "libl.h"
 
-__attribute__((weak))
-int main(void) {
-    yylex();
-    return 0;
+__attribute__((weak)) int main(void) {
+  yylex();
+  return 0;
 }

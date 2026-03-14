@@ -6,24 +6,23 @@
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/13 02:58:47 by jikaewsi          #+#    #+#             */
-/*   Updated: 2025/12/13 02:58:48 by jikaewsi         ###   ########.fr       */
+/*   Updated: 2026/03/14 11:05:36 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <stdio.h>
-#include <stdint.h>
-
-extern char *yytext;
-extern int yyleng;
-extern uint8_t yy_hold_char;
-extern int yy_hold_char_restored;
-extern int yy_read_char(void);
+#include "libl.h"
 
 int input(void) {
-    if (!yy_hold_char_restored) {
-        yytext[yyleng] = yy_hold_char;
-        yy_hold_char_restored = 1;
-    }
-    int c = yy_read_char();
-    return c == EOF ? 0 : c;
+  if (!yy_hold_char_restored) {
+    yytext[yyleng] = yy_hold_char;
+    yy_hold_char_restored = 1;
+  }
+  int c = yy_read_char();
+  if (c == '\n') {
+    yylineno++;
+    yy_at_bol = 1;
+  } else if (c != EOF) {
+    yy_at_bol = 0;
+  }
+  return c == EOF ? 0 : c;
 }

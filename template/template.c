@@ -1,5 +1,7 @@
 // Template for lex.yy.c generation. Placeholders start and end with __
 
+#include "ft_lex.h"
+
 __HEADER_PLACEHOLDER__
 
 __TABLES_PLACEHOLDER__
@@ -15,29 +17,25 @@ int   yylineno = 1;
 
 /* Current start condition (defaults to 0 / INITIAL) */
 int   yy_start = 0;
-int yy_at_bol = 1; // 1 if we are at the beginning of a line
-#define BEGIN(state) (yy_start = (state))
+int   yy_at_bol = 1; // 1 if we are at the beginning of a line
 
 /* Dynamic input buffer */
-static char  *yy_buffer    = NULL;
-static int    yy_buf_len   = 0;
-static int    yy_buf_pos   = 0;
-static int    yy_buf_cap   = 0;
+char  *yy_buffer    = NULL;
+int    yy_buf_len   = 0;
+int    yy_buf_pos   = 0;
+int    yy_buf_cap   = 0;
 
 /* Hold-char mechanism for input()/unput()/yyless() */
-static unsigned char yy_hold_char          = 0;
-static int           yy_hold_char_restored = 1;
+uint8_t yy_hold_char          = 0;
+int     yy_hold_char_restored = 1;
 
 /* yymore() support */
-static int yy_more_flag = 0;
-static int yy_more_len  = 0;
-
-/* Forward declarations for libl linkage */
-extern int yywrap(void);
+int yy_more_flag = 0;
+int yy_more_len  = 0;
 
 /* --- Internal helpers --- */
 
-static void yy_buf_ensure(int needed) {
+void yy_buf_ensure(int needed) {
     if (yy_buf_cap >= needed)
         return;
     int new_cap = (yy_buf_cap == 0) ? 256 : yy_buf_cap;
@@ -213,7 +211,7 @@ __EOF_ACTION_PLACEHOLDER__
             }
 
             /* Save the hold char for input()/unput()/yyless() */
-            yy_hold_char = yy_buffer[yyleng];
+            yy_hold_char = (unsigned char)yy_buffer[yyleng];
             yy_hold_char_restored = 0;
 
             /* Set buffer position for libl functions */
