@@ -1,6 +1,6 @@
 // Template for lex.yy.c generation. Placeholders start and end with __
 
-#include "ft_lex.h"
+#include "libl.h"
 
 __HEADER_PLACEHOLDER__
 

@@ -65,9 +65,21 @@ clean:
 	rm -rf $(OBJ_DIR)
 	rm -f $(GENERATED_SRC)
 
-fclean: clean
+test: all
+	@chmod +x tests/test_runner.sh
+	@./tests/test_runner.sh
+
+test-%: all
+	@chmod +x tests/test_runner.sh
+	@FT_LEX="./ft_lex" LIBL="libl.a" PARSER_DIR="tests/parser" DATA_DIR="tests/text" \
+	bash -c 'source tests/test_runner.sh && run_test "tests/parser/$*.l" "tests/text/$*.txt"'
+
+test-clean:
+	rm -f lex.yy.c lexer_test lexer out.txt test_yyless.l
+
+fclean: clean test-clean
 	rm -f $(NAME) $(LIBL)
 
 re: fclean all
 
-.PHONY: all clean fclean re clang
+.PHONY: all clean fclean re clang test test-% test-clean

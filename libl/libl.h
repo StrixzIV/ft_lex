@@ -40,6 +40,10 @@ extern int yy_hold_char_restored;
 extern int yy_more_flag;
 extern int yy_more_len;
 
+/* --- Macros --- */
+
+#define BEGIN(state) (yy_start = (state))
+
 /* --- Library functions --- */
 
 int yylex(void);
