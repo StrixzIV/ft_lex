@@ -46,9 +46,19 @@ public:
     const std::map<std::string, std::string> &getNamedDefinitions() const;
     const std::vector<StartCondition> &getStartConditions() const;
     const std::map<int, std::string> &getEofActions() const;
+
+    std::string formatError(int line, int col, const std::string &msg) const;
     
 private:
+    struct FileBoundary {
+        std::string filename;
+        int startLine;
+        int endLine;
+        size_t startPos;
+    };
+
     std::vector<std::string> _filenames;
+    std::vector<FileBoundary> _fileBoundaries;
     std::string _content;
     std::string _definitions;
     std::string _rules;
@@ -58,7 +68,8 @@ private:
     std::map<std::string, std::string> _namedDefinitions;
     std::vector<StartCondition> _startConditions;
     std::map<int, std::string> _eofActions; // keyed by start condition index
-    int _lineNo; // current line in .l file being parsed
+    int _lineNo; // current line in concatenated stream
+     
 
     void _readFile();
     void _splitSections();

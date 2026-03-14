@@ -34,6 +34,7 @@ const std::string &LexerParser::getUserCode() const {
 void LexerParser::_readFile() {
 
     _content = "";
+    int currentLine = 1;
     for (const auto &filename : _filenames) {
         std::ifstream file(filename);
 
@@ -41,14 +42,46 @@ void LexerParser::_readFile() {
             throw std::runtime_error("Could not open file: " + filename);
         }
 
+        size_t startPos = _content.size();
+        int startLine = currentLine;
+
         std::stringstream buffer;
         buffer << file.rdbuf();
-        _content += buffer.str();
+        std::string fileContent = buffer.str();
+        _content += fileContent;
+
+        // Count lines in this file
+        for (char c : fileContent) {
+            if (c == '\n')
+                currentLine++;
+        }
+
         if (!_content.empty() && _content.back() != '\n') {
-            _content += '\n'; // Ensure each file ends with a newline before concatenation
+            _content += '\n'; // Ensure each file ends with a newline
+            currentLine++;
+        }
+
+        _fileBoundaries.push_back({filename, startLine, currentLine - 1, startPos});
+    }
+
+}
+
+std::string LexerParser::formatError(int line, int col, const std::string &msg) const {
+    std::string filename = "Lexer";
+    int localLine = line;
+
+    // Find which file this absolute line belongs to
+    for (const auto &fb : _fileBoundaries) {
+        if (line >= fb.startLine && line <= fb.endLine) {
+            filename = fb.filename;
+            localLine = line - fb.startLine + 1;
+            break;
         }
     }
 
+    std::stringstream ss;
+    ss << filename << ":" << localLine << ":" << col << ": error: " << msg;
+    return ss.str();
 }
 
 void LexerParser::_splitSections() {
@@ -56,7 +89,7 @@ void LexerParser::_splitSections() {
     size_t first_sep_pos = _content.find("%%");
 
     if (first_sep_pos == std::string::npos) {
-        throw std::runtime_error("Lexer: error: Missing first '%%' delimiter");
+        throw std::runtime_error(formatError(1, 1, "Missing first '%%' delimiter"));
     }
 
     std::string rawDefs = _content.substr(0, first_sep_pos);
@@ -235,67 +268,110 @@ std::string LexerParser::_expandDefinitions(const std::string &regex) {
 }
 
 void LexerParser::_parseRules() {
-    std::istringstream stream(_rules);
-    std::string line;
-    
-    while (std::getline(stream, line)) {
-        _lineNo++;
-        // Skip empty / whitespace-only lines
-        size_t first = line.find_first_not_of(" \t\r\n");
-        if (first == std::string::npos)
-            continue;
-        
-        std::string trimmed = line.substr(first);
-        if (trimmed.empty())
-            continue;
+    // We need to track the absolute position in _content to use _fileBoundaries effectively,
+    // or just calculate local file positions carefully.
+    // _rules is a substring of _content. Let's find its start position in _content.
+    size_t rulesStartInContent = _content.find(_rules);
+    if (rulesStartInContent == std::string::npos) rulesStartInContent = 0;
+
+    size_t currentPos = rulesStartInContent;
+    int currentLine = _lineNo;
+    int currentCol = 1;
+
+    auto advance = [&](size_t n) {
+        for (size_t k = 0; k < n; ++k) {
+            if (_content[currentPos] == '\n') {
+                currentLine++;
+                currentCol = 1;
+            } else {
+                currentCol++;
+            }
+            currentPos++;
+        }
+    };
+
+
+    // Since _rules might have been modified or simplified, let's parse from _content directly
+    // starting after the first %%.
+    size_t firstSep = _content.find("%%");
+    currentPos = firstSep + 2;
+    currentLine = 1;
+    for (size_t i = 0; i < currentPos; ++i) if (_content[i] == '\n') currentLine++;
+    currentCol = 1; // Actually we should calculate col based on last \n
+
+    while (currentPos < _content.size()) {
+        // Check for second %%
+        if (_content.substr(currentPos, 2) == "%%") {
+            break;
+        }
+
+        // Skip leading whitespace of a line
+        while (currentPos < _content.size() && (_content[currentPos] == ' ' || _content[currentPos] == '\t' || _content[currentPos] == '\r' || _content[currentPos] == '\n')) {
+            advance(1);
+            if (currentPos < _content.size() && _content.substr(currentPos, 2) == "%%") goto end_rules;
+        }
+
+        if (currentPos >= _content.size()) break;
 
         Rule rule;
-        rule.lineNo = _lineNo;
+        rule.lineNo = currentLine;
+        
 
         // --- Extract State Prefix <STATE1,STATE2> ---
-        std::vector<std::string> ruleStartConditions;
-        std::string trimmedForParse = trimmed;
-
-        if (trimmedForParse[0] == '<' && (trimmedForParse.size() < 7 || trimmedForParse.substr(0, 7) != "<<EOF>>")) {
-            size_t endAngle = trimmedForParse.find('>');
+        if (_content[currentPos] == '<' && _content.substr(currentPos, 7) != "<<EOF>>") {
+            size_t endAngle = _content.find('>', currentPos);
             if (endAngle != std::string::npos) {
-                std::string statesStr = trimmedForParse.substr(1, endAngle - 1);
+                std::string statesStr = _content.substr(currentPos + 1, endAngle - currentPos - 1);
                 std::istringstream ss(statesStr);
                 std::string state;
                 while (std::getline(ss, state, ',')) {
-                    size_t start = state.find_first_not_of(" \t");
-                    size_t end = state.find_last_not_of(" \t");
-                    if (start != std::string::npos && end != std::string::npos) {
-                        ruleStartConditions.push_back(state.substr(start, end - start + 1));
+                    size_t s = state.find_first_not_of(" \t");
+                    size_t e = state.find_last_not_of(" \t");
+                    if (s != std::string::npos && e != std::string::npos) {
+                        rule.startConditions.push_back(state.substr(s, e - s + 1));
                     }
                 }
-                size_t nextChar = trimmedForParse.find_first_not_of(" \t", endAngle + 1);
-                trimmedForParse = (nextChar != std::string::npos) ? trimmedForParse.substr(nextChar) : "";
+                advance(endAngle - currentPos + 1);
+                // Skip space after >
+                while (currentPos < _content.size() && (_content[currentPos] == ' ' || _content[currentPos] == '\t')) advance(1);
             }
         }
 
-        if (trimmedForParse.empty())
-            continue;
+        if (currentPos >= _content.size()) break;
 
         // --- Detect <<EOF>> rule ---
-        if (trimmedForParse.size() >= 7 && trimmedForParse.substr(0, 7) == "<<EOF>>") {
-            // Determine which start conditions this EOF rule applies to
-            std::vector<int> condIndices;
-            if (ruleStartConditions.empty()) {
-                // If no state prefix, applies to all NON-EXCLUSIVE states (INITIAL usually)
-                // Wait, in lex, <<EOF>> without prefix applies to INITIAL.
-                // In flex, it applies to INITIAL if it's the only one.
-                // Actually, if it's without <>, it should apply to all non-exclusive?
-                // Flex says: "<<EOF>>  applies to all start conditions which do not have their own <<EOF>> rule"
-                // For simplicity, let's make it apply to ALL if no conditions are specified,
-                // OR only those specified.
-                for (size_t ci = 0; ci < _startConditions.size(); ++ci)
-                    condIndices.push_back((int)ci);
-            } else if (ruleStartConditions[0] == "*") {
-                for (size_t ci = 0; ci < _startConditions.size(); ++ci)
-                    condIndices.push_back((int)ci);
+        if (_content.substr(currentPos, 7) == "<<EOF>>") {
+            int eofLine = currentLine;
+            int eofCol = currentCol;
+            advance(7);
+            
+            // Extract action
+            while (currentPos < _content.size() && (_content[currentPos] == ' ' || _content[currentPos] == '\t')) advance(1);
+            
+            std::string eofAction;
+            if (currentPos < _content.size() && _content[currentPos] == '{') {
+                int braceDepth = 0;
+                while (currentPos < _content.size()) {
+                    char ac = _content[currentPos];
+                    if (ac == '{') braceDepth++;
+                    if (ac == '}') braceDepth--;
+                    eofAction += ac;
+                    advance(1);
+                    if (braceDepth == 0) break;
+                }
             } else {
-                for (const auto &sc : ruleStartConditions) {
+                size_t lineEnd = _content.find('\n', currentPos);
+                if (lineEnd == std::string::npos) lineEnd = _content.size();
+                eofAction = _content.substr(currentPos, lineEnd - currentPos);
+                advance(lineEnd - currentPos);
+            }
+
+            // Map EOF action to start conditions
+            std::vector<int> condIndices;
+            if (rule.startConditions.empty() || rule.startConditions[0] == "*") {
+                for (size_t ci = 0; ci < _startConditions.size(); ++ci) condIndices.push_back((int)ci);
+            } else {
+                for (const auto &sc : rule.startConditions) {
                     bool found = false;
                     for (size_t ci = 0; ci < _startConditions.size(); ++ci) {
                         if (_startConditions[ci].name == sc) {
@@ -304,192 +380,81 @@ void LexerParser::_parseRules() {
                         }
                     }
                     if (!found) {
-                        std::cerr << "Lexer:" << _lineNo << ": warning: unknown start condition '" << sc << "'\n";
+                        std::cerr << formatError(eofLine, eofCol, "unknown start condition '" + sc + "'") << "\n";
                     }
                 }
             }
-
-            // Extract action (everything after <<EOF>>)
-            size_t actionStart = trimmedForParse.find_first_not_of(" \t", 7);
-            std::string eofAction;
-            if (actionStart != std::string::npos && trimmedForParse[actionStart] == '{') {
-                // Brace-counted multiline action (reuse logic below)
-                int braceDepth = 0;
-                std::string actionLine = trimmedForParse.substr(actionStart);
-                while (true) {
-                    for (size_t j = 0; j < actionLine.size(); ++j) {
-                        if (actionLine[j] == '{') braceDepth++;
-                        if (actionLine[j] == '}') braceDepth--;
-                        eofAction += actionLine[j];
-                        if (braceDepth == 0) break;
-                    }
-                    if (braceDepth == 0) break;
-                    if (!std::getline(stream, line)) break;
-                    _lineNo++;
-                    eofAction += '\n';
-                    actionLine = line;
-                }
-            } else if (actionStart != std::string::npos) {
-                eofAction = trimmedForParse.substr(actionStart);
-            }
-
-            for (int ci : condIndices) {
-                // Only overwrite if this is a specific rule, 
-                // or if no rule has been set for this condition yet.
-                if (!ruleStartConditions.empty() || _eofActions.find(ci) == _eofActions.end()) {
-                    _eofActions[ci] = eofAction;
-                }
-            }
+            for (int ci : condIndices) _eofActions[ci] = eofAction;
             continue;
         }
 
-        // --- Extract the regex pattern ---
-        // We must skip over [...] character classes and "..." quoted strings
-        // because they can contain spaces.
-        rule.startConditions = ruleStartConditions; // assign extracted state conditions
-        size_t i = 0;
-        while (i < trimmedForParse.size()) {
-            char c = trimmedForParse[i];
+        // --- Extract Regex ---
+        size_t regexStartPos = currentPos;
+        
+        
 
-            // Whitespace outside brackets/quotes = end of pattern
-            if (c == ' ' || c == '\t')
-                break;
-
-            if (c == '\\') {
-                // Escaped char — skip next
-                i += 2;
-                continue;
-            }
-
+        while (currentPos < _content.size()) {
+            char c = _content[currentPos];
+            if (c == ' ' || c == '\t' || c == '\n') break;
+            if (c == '\\') { advance(2); continue; }
             if (c == '[') {
-                // Character class — scan to matching ']'
-                i++;
-                if (i < trimmedForParse.size() && trimmedForParse[i] == '^')
-                    i++;  // negation
-                if (i < trimmedForParse.size() && trimmedForParse[i] == ']')
-                    i++;  // literal ] at start
-                while (i < trimmedForParse.size() && trimmedForParse[i] != ']') {
-                    if (trimmedForParse[i] == '\\')
-                        i++;  // skip escaped char inside class
-                    i++;
+                advance(1);
+                if (currentPos < _content.size() && _content[currentPos] == '^') advance(1);
+                if (currentPos < _content.size() && _content[currentPos] == ']') advance(1);
+                while (currentPos < _content.size() && _content[currentPos] != ']') {
+                    if (_content[currentPos] == '\\') advance(1);
+                    advance(1);
                 }
-                // i now points at ']' or end
-                i++;
+                advance(1);
                 continue;
             }
-
             if (c == '"') {
-                // Quoted string — scan to matching '"'
-                i++;
-                while (i < trimmedForParse.size() && trimmedForParse[i] != '"') {
-                    if (trimmedForParse[i] == '\\')
-                        i++;
-                    i++;
+                advance(1);
+                while (currentPos < _content.size() && _content[currentPos] != '"') {
+                    if (_content[currentPos] == '\\') advance(1);
+                    advance(1);
                 }
-                // i now points at closing '"' or end
-                i++;
+                advance(1);
                 continue;
             }
-
-            i++;
+            advance(1);
         }
-        
-        rule.regex = trimmedForParse.substr(0, i);
-        
-        if (rule.regex.empty())
-            continue;
 
-        // Expand named definitions before storing
+        rule.regex = _content.substr(regexStartPos, currentPos - regexStartPos);
+        if (rule.regex.empty()) continue;
         rule.regex = _expandDefinitions(rule.regex);
 
-        // --- Extract the action ---
-        // Skip whitespace between pattern and action
-        size_t actionStart = trimmedForParse.find_first_not_of(" \t", i);
-        
-        if (actionStart == std::string::npos) {
-            // No action on this line
-            rule.action = "";
-        } else if (trimmedForParse[actionStart] == '{') {
-            // Brace-counted multi-line action
+        // --- Extract Action ---
+        while (currentPos < _content.size() && (_content[currentPos] == ' ' || _content[currentPos] == '\t')) advance(1);
+
+        if (currentPos < _content.size() && _content[currentPos] == '{') {
             int braceDepth = 0;
-            std::string actionText;
-            std::string actionLine = trimmedForParse.substr(actionStart);
-            
-            while (true) {
-                for (size_t j = 0; j < actionLine.size(); ++j) {
-                    char ac = actionLine[j];
-                    
-                    // Skip string literals
-                    if (ac == '"' || ac == '\'') {
-                        char quote = ac;
-                        actionText += ac;
-                        j++;
-                        while (j < actionLine.size() && actionLine[j] != quote) {
-                            if (actionLine[j] == '\\') {
-                                actionText += actionLine[j++];
-                                if (j < actionLine.size())
-                                    actionText += actionLine[j];
-                            } else {
-                                actionText += actionLine[j];
-                            }
-                            j++;
-                        }
-                        if (j < actionLine.size())
-                            actionText += actionLine[j]; // closing quote
-                        continue;
+            size_t actionStart = currentPos;
+            while (currentPos < _content.size()) {
+                char ac = _content[currentPos];
+                if (ac == '"' || ac == '\'') {
+                    char q = ac; advance(1);
+                    while (currentPos < _content.size() && _content[currentPos] != q) {
+                        if (_content[currentPos] == '\\') advance(1);
+                        advance(1);
                     }
-                    
-                    // Skip C comments
-                    if (ac == '/' && j + 1 < actionLine.size()) {
-                        if (actionLine[j + 1] == '/') {
-                            // Line comment — rest of line is comment
-                            actionText += actionLine.substr(j);
-                            j = actionLine.size();
-                            break;
-                        }
-                        if (actionLine[j + 1] == '*') {
-                            // Block comment — scan until */
-                            actionText += "/*";
-                            j += 2;
-                            while (j < actionLine.size()) {
-                                if (actionLine[j] == '*' && j + 1 < actionLine.size() && actionLine[j + 1] == '/') {
-                                    actionText += "*/";
-                                    j++;
-                                    break;
-                                }
-                                actionText += actionLine[j];
-                                j++;
-                            }
-                            continue;
-                        }
-                    }
-                    
-                    if (ac == '{') braceDepth++;
-                    if (ac == '}') braceDepth--;
-                    actionText += ac;
-                    
-                    if (braceDepth == 0) {
-                        // Done — action complete
-                        break;
-                    }
+                    advance(1); continue;
                 }
-                
-                if (braceDepth == 0)
-                    break;
-                
-                // Need more lines
-                if (!std::getline(stream, line))
-                    break;
-                actionText += '\n';
-                actionLine = line;
+                if (ac == '{') braceDepth++;
+                if (ac == '}') braceDepth--;
+                advance(1);
+                if (braceDepth == 0) break;
             }
-            
-            rule.action = actionText;
+            rule.action = _content.substr(actionStart, currentPos - actionStart);
         } else {
-            // Single expression action (no braces) — rest of line
-            rule.action = trimmedForParse.substr(actionStart);
+            size_t lineEnd = _content.find('\n', currentPos);
+            if (lineEnd == std::string::npos) lineEnd = _content.size();
+            rule.action = _content.substr(currentPos, lineEnd - currentPos);
+            advance(lineEnd - currentPos);
         }
-        
+
         _rulesList.push_back(rule);
     }
+
+end_rules:;
 }

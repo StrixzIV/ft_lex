@@ -156,7 +156,7 @@ int main(int argc, char** argv) {
                         bolStart->epsilonTransitions.push_back(nfa.start);
                     }
                 } catch (const std::exception& e) {
-                    std::cerr << "Lexer:" << rule.lineNo << ": error: " << e.what() << "\n";
+                    std::cerr << parser.formatError(rule.lineNo, 1, e.what()) << "\n";
                     return 1;
                 }
 
