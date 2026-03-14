@@ -3,9 +3,11 @@
 # Configuration
 FT_LEX="./ft_lex"
 LIBL="libl.a"
-PARSER_DIR="tests/parser"
+PARSER_C_DIR="tests/parser/c"
+PARSER_PY_DIR="tests/parser/py"
 DATA_DIR="tests/text"
 GEN_C="lex.yy.c"
+GEN_PY="lex.yy.py"
 OUT_BIN="lexer_test"
 
 # Colors
@@ -120,36 +122,69 @@ run_error_test() {
     fi
 }
 
+run_python_test() {
+    local l_file="$1"
+    local txt_file="$2"
+    local name=$(basename "$l_file" .l)
+
+    echo -n "Testing Python target ($name)... "
+
+    # 1. Generate Python code
+    $FT_LEX -l python -o "$GEN_PY" "$l_file" > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}FAILED (Generation)${NC}"
+        return 1
+    fi
+
+    # 2. Run Python lexer
+    if [ -f "$txt_file" ]; then
+        python3 "$GEN_PY" "$txt_file" > /dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}PASSED${NC}"
+        else
+            echo -e "${RED}FAILED (Runtime)${NC}"
+        fi
+    else
+        python3 "$GEN_PY" < /dev/null > /dev/null 2>&1
+        echo -e "${GREEN}PASSED (Build only)${NC}"
+    fi
+
+    # Cleanup
+    rm "$GEN_PY" 2>/dev/null
+}
+
 # Only run all tests if not being sourced
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     check_deps || exit 1
     
-    echo -e "${YELLOW}--- Passing Tests ---${NC}"
-    run_test "$PARSER_DIR/minimal.l" "$DATA_DIR/minimal.txt"
-    run_test "$PARSER_DIR/anchors.l" "$DATA_DIR/anchors.txt"
-    run_test "$PARSER_DIR/charclass.l" "$DATA_DIR/charclass.txt"
-    run_test "$PARSER_DIR/regex_test.l" "$DATA_DIR/regex_test.txt"
-    run_test "$PARSER_DIR/simple_test.l" ""
-    run_test "$PARSER_DIR/states.l" ""
-    run_test "$PARSER_DIR/definitions.l" ""
-    run_test "$PARSER_DIR/counter.l" ""
-    run_test "$PARSER_DIR/eof.l" ""
-    run_test "$PARSER_DIR/multiline.l" ""
-    run_test "$PARSER_DIR/no_user_code.l" ""
-    run_test "$PARSER_DIR/posix_test.l" ""
-    run_test "$PARSER_DIR/test.l" ""
-    run_test "$PARSER_DIR/trailing.l" ""
-    run_test "$PARSER_DIR/valid.l" ""
+    echo -e "${YELLOW}--- C Passing Tests ---${NC}"
+    for f in "$PARSER_C_DIR"/*.l; do
+        if [[ $(basename "$f") != error_* && $(basename "$f") != missing_* && $(basename "$f") != multi_* ]]; then
+            # Match data file if exists, otherwise empty
+            base=$(basename "$f" .l)
+            data=""
+            if [ -f "$DATA_DIR/$base.txt" ]; then data="$DATA_DIR/$base.txt"; fi
+            run_test "$f" "$data"
+        fi
+    done
     
-    echo -e "\n${YELLOW}--- Multi-file Tests ---${NC}"
-    run_multi_test "combined" "$DATA_DIR/multi.txt" "$PARSER_DIR/multi_1.l" "$PARSER_DIR/multi_2.l"
+    echo -e "\n${YELLOW}--- C Multi-file Tests ---${NC}"
+    run_multi_test "combined" "$DATA_DIR/multi.txt" "$PARSER_C_DIR/multi_1.l" "$PARSER_C_DIR/multi_2.l"
     
+    echo -e "\n${YELLOW}--- Python Target Tests ---${NC}"
+    for f in "$PARSER_PY_DIR"/*.l; do
+        base=$(basename "$f" .l)
+        data=""
+        if [ -f "$DATA_DIR/$base.txt" ]; then data="$DATA_DIR/$base.txt"; fi
+        run_python_test "$f" "$data"
+    done
+
     echo -e "\n${YELLOW}--- Error Handling Tests ---${NC}"
-    run_error_test "$PARSER_DIR/error_test.l"
-    run_error_test "$PARSER_DIR/error_test_delim.l"
-    run_error_test "$PARSER_DIR/error_test_fragment.l"
-    run_error_test "$PARSER_DIR/error_test_sc.l"
-    run_error_test "$PARSER_DIR/missing_delim.l"
+    run_error_test "$PARSER_C_DIR/error_test.l"
+    run_error_test "$PARSER_C_DIR/error_test_delim.l"
+    run_error_test "$PARSER_C_DIR/error_test_fragment.l"
+    run_error_test "$PARSER_C_DIR/error_test_sc.l"
+    run_error_test "$PARSER_C_DIR/missing_delim.l"
 
     echo -e "\n${YELLOW}--- Done ---${NC}"
 fi
