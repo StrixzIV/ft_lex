@@ -67,11 +67,13 @@ void AGenerator::generate(const std::vector<DFA> &dfas, const LexerParser &parse
     std::string header = generateHeader(parser);
     std::string tables = generateTables(dfas, parser);
     std::string lexer_body = generateLexerBody(parser);
+    std::string eof_actions = generateEofActions(parser);
     std::string user_code = generateUserCode(parser);
 
     replace_placeholder(output_code, "__HEADER_PLACEHOLDER__", header);
     replace_placeholder(output_code, "__TABLES_PLACEHOLDER__", tables);
     replace_placeholder(output_code, "__YYLEX_BODY_PLACEHOLDER__", lexer_body);
+    replace_placeholder(output_code, "__EOF_ACTION_PLACEHOLDER__", eof_actions);
     replace_placeholder(output_code, "__USER_CODE_PLACEHOLDER__", user_code);
 
     out << output_code;

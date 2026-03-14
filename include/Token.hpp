@@ -20,8 +20,9 @@ enum TokenType {
     CHAR, 
     OPERATOR, 
     CHARSET,
-    ANCHOR_START, // Acts like prepending ^ to a regex
-    ANCHOR_END    // Acts like appending $ to a regex
+    ANCHOR_START,          // ^ start of line (pseudo-char 256)
+    ANCHOR_END,            // $ end of line   (pseudo-char 257)
+    TRAILING_CONTEXT_OP    // / trailing context operator
 };
 
 struct Token {

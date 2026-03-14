@@ -95,6 +95,15 @@ std::string CGenerator::generateTables(const std::vector<DFA> &dfas, const Lexer
     }
     ss << "\n};\n\n";
 
+    // Trailing Context Boundary Table: 1 = boundary (end of r1), -1 = none
+    ss << "static const int yy_trailing_ctx[" << totalStates << "] = {\n    ";
+    for (const auto& dfa : dfas) {
+        for (const auto& state : dfa.states) {
+            ss << (state->trailingContextBoundary ? 1 : -1) << ", ";
+        }
+    }
+    ss << "\n};\n\n";
+
     return ss.str();
 }
 
@@ -120,5 +129,22 @@ std::string CGenerator::generateUserCode(const LexerParser &parser) {
     std::stringstream ss;
     ss << "\n/* User Code Section */\n";
     ss << parser.getUserCode() << "\n";
+    return ss.str();
+}
+
+std::string CGenerator::generateEofActions(const LexerParser &parser) {
+    std::stringstream ss;
+    const auto &eofActions = parser.getEofActions();
+
+    if (!eofActions.empty()) {
+        ss << "            switch (yy_start) {\n";
+        for (const auto& [condIdx, action] : eofActions) {
+            ss << "                case " << condIdx << ": {\n";
+            ss << "                    " << action << "\n";
+            ss << "                    break;\n";
+            ss << "                }\n";
+        }
+        ss << "            }\n";
+    }
     return ss.str();
 }

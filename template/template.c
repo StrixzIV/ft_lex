@@ -84,6 +84,7 @@ int yylex(void) {
 
         int buf_idx = 0;
         int last_accepting_idx = -1;
+        int last_trailing_boundary_idx = -1; /* buffer pos at end of r1 for trailing context */
 
         /* Handle yymore(): keep previous match text */
         if (yy_more_flag) {
@@ -96,14 +97,18 @@ int yylex(void) {
         /* Read first char */
         c = fgetc(yyin);
         if (c == EOF) {
+__EOF_ACTION_PLACEHOLDER__
             int ret = yywrap();
             if (ret != 0) {
-                return 0; // EOF reached and yywrap says stop
+                return 0; /* EOF reached and yywrap says stop */
             }
-            continue; // Retry reading if yywrap swapped the file
+            continue; /* Retry reading if yywrap swapped the file */
         }
 
-        /* Check for Start of Line Anchor (256) */
+        /* Check for Start of Line Anchor (256) — zero-width assertion.
+         * If we are at the beginning of a line, try to advance the current state
+         * via the pseudo-char 256. This does NOT consume 'c'; 'c' is still the
+         * first real character and will be used for the normal transition below. */
         if (yy_at_bol) {
             int anchor_state = yy_nxt[current_state][256];
             if (anchor_state != -1) {
@@ -115,23 +120,22 @@ int yylex(void) {
             }
         }
 
-        /* Push char to buffer */
-        yy_buffer[buf_idx++] = (char)c;
-        yy_buffer[buf_idx] = '\0';
-
-        /* Check for End of Line Anchor (257) on '\n' */
+        /* If first char is '\n', check EOL anchor from current_state
+         * (the match ends before the '\n') */
         if (c == '\n') {
             int eol_state = yy_nxt[current_state][257];
-            if (eol_state != -1) {
-                if (yy_accept[eol_state] != -1) {
-                    // Match found before the '\n'
-                    last_accepting_state = eol_state;
-                    last_accepting_idx = buf_idx - 1;
-                }
+            if (eol_state != -1 && yy_accept[eol_state] != -1) {
+                last_accepting_state = eol_state;
+                last_accepting_idx = buf_idx;
             }
         }
 
-        /* Initial transition */
+        /* Push first char to buffer */
+        yy_buf_ensure(buf_idx + 2);
+        yy_buffer[buf_idx++] = (char)c;
+        yy_buffer[buf_idx] = '\0';
+
+        /* Normal DFA transition on the first real char */
         next_state = yy_nxt[current_state][(unsigned char)c];
 
         while (next_state != -1) {
@@ -142,34 +146,35 @@ int yylex(void) {
                 last_accepting_state = current_state;
                 last_accepting_idx = buf_idx;
             }
+            /* Track trailing context boundary */
+            if (yy_trailing_ctx[current_state] == 1) {
+                last_trailing_boundary_idx = buf_idx;
+            }
 
             c = fgetc(yyin);
             if (c == EOF) {
-                /* Check for End of Line Anchor (257) on EOF */
+                /* Check EOL anchor on EOF (treat end-of-file like end-of-line) */
                 int eol_state = yy_nxt[current_state][257];
-                if (eol_state != -1) {
-                    if (yy_accept[eol_state] != -1) {
-                        last_accepting_state = eol_state;
-                        last_accepting_idx = buf_idx;
-                    }
+                if (eol_state != -1 && yy_accept[eol_state] != -1) {
+                    last_accepting_state = eol_state;
+                    last_accepting_idx = buf_idx;
                 }
                 break;
+            }
+
+            /* If char is '\n', check EOL anchor from current_state
+             * (the match ends before the '\n') */
+            if (c == '\n') {
+                int eol_state = yy_nxt[current_state][257];
+                if (eol_state != -1 && yy_accept[eol_state] != -1) {
+                    last_accepting_state = eol_state;
+                    last_accepting_idx = buf_idx;
+                }
             }
 
             yy_buf_ensure(buf_idx + 2);
             yy_buffer[buf_idx++] = (char)c;
             yy_buffer[buf_idx] = '\0';
-
-            /* Check for End of Line Anchor (257) on '\n' */
-            if (c == '\n') {
-                int eol_state = yy_nxt[current_state][257];
-                if (eol_state != -1) {
-                    if (yy_accept[eol_state] != -1) {
-                        last_accepting_state = eol_state;
-                        last_accepting_idx = buf_idx - 1;
-                    }
-                }
-            }
 
             next_state = yy_nxt[current_state][(unsigned char)c];
         }
@@ -177,6 +182,14 @@ int yylex(void) {
         /* No more transitions. */
         if (last_accepting_state != -1) {
             /* Match found — push back characters past the match */
+
+            /* For trailing context rules: if we have a boundary index,
+             * the actual yytext is only up to the boundary (r1 part).
+             * Roll back everything after the boundary into the input stream. */
+            if (last_trailing_boundary_idx >= 0) {
+                /* Use boundary as the match end instead of last_accepting_idx */
+                last_accepting_idx = last_trailing_boundary_idx;
+            }
             while (buf_idx > last_accepting_idx) {
                 int ch = (unsigned char)yy_buffer[--buf_idx];
                 ungetc(ch, yyin);
@@ -235,6 +248,7 @@ __YYLEX_BODY_PLACEHOLDER__
             }
         }
     }
+    return 0;
 }
 
 __USER_CODE_PLACEHOLDER__

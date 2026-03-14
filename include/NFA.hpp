@@ -26,13 +26,17 @@ struct State {
     int priority; // -1 for non-accepting, otherwise rule index (lower is better)
     std::string action;
     
+    // For trailing context (r1/r2): marks the boundary state where r1 ends.
+    // The DFA state that is the boundary gets trailingContextBoundary = true.
+    bool trailingContextBoundary;
+    
     // Transitions on specific characters (or pseudo-chars > 255)
     std::map<int, std::shared_ptr<State>> transitions;
     
     // Epsilon transitions (\epsilon)
     std::vector<std::shared_ptr<State>> epsilonTransitions;
 
-    State(int id) : id(id), isAccepting(false), priority(-1) {}
+    State(int id) : id(id), isAccepting(false), priority(-1), trailingContextBoundary(false) {}
 };
 
 class NFA {
@@ -55,6 +59,7 @@ public:
     static NFA makePlus(NFA nfa, int &stateCounter);
     static NFA makeOption(NFA nfa, int &stateCounter);
     static NFA makeAnyChar(int &stateCounter);
+    static NFA makeTrailingContext(NFA r1, NFA r2, int &stateCounter);
 
 };
 

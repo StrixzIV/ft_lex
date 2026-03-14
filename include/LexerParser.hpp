@@ -26,6 +26,7 @@ public:
         std::string regex;
         std::string action;
         std::vector<std::string> startConditions; // Which conditions this rule applies to
+        int lineNo; // Line number where this rule starts
     };
 
     struct StartCondition {
@@ -44,6 +45,7 @@ public:
     const std::vector<Rule> &getRulesList() const;
     const std::map<std::string, std::string> &getNamedDefinitions() const;
     const std::vector<StartCondition> &getStartConditions() const;
+    const std::map<int, std::string> &getEofActions() const;
     
 private:
     std::string _filename;
@@ -55,6 +57,8 @@ private:
     std::vector<Rule> _rulesList;
     std::map<std::string, std::string> _namedDefinitions;
     std::vector<StartCondition> _startConditions;
+    std::map<int, std::string> _eofActions; // keyed by start condition index
+    int _lineNo; // current line in .l file being parsed
 
     void _readFile();
     void _splitSections();

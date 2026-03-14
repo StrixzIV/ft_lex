@@ -25,6 +25,14 @@ std::vector<Token> RegexParser::toPostfix(const std::string &regex) {
     for (const auto &token : explicitConcat) {
         if (token.type == CHAR || token.type == CHARSET || token.type == ANCHOR_START || token.type == ANCHOR_END) {
             postfix.push_back(token);
+        } else if (token.type == TRAILING_CONTEXT_OP) {
+            // Treat as a binary operator: flush all higher-prec ops then push
+            while (!operators.empty() && operators.top().c != '(' &&
+                   _getPrecedence(operators.top()) >= _getPrecedence(token)) {
+                postfix.push_back(operators.top());
+                operators.pop();
+            }
+            operators.push(token);
         } else if (token.type == OPERATOR) {
             if (token.c == '(') {
                 operators.push(token);
@@ -198,8 +206,32 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
                 }
             }
             tokens.push_back(Token(set));
+        } else if (c == '"') {
+            // Quoted string: treat every char inside literally (except backslash escapes)
+            i++;
+            while (i < regex.size() && regex[i] != '"') {
+                if (regex[i] == '\\') {
+                    i++;
+                    if (i >= regex.size()) throw std::runtime_error("Trailing backslash in quote");
+                    char next = regex[i];
+                    char escaped = next;
+                    if (next == 'n') escaped = '\n';
+                    else if (next == 't') escaped = '\t';
+                    else if (next == 'r') escaped = '\r';
+                    else if (next == 'v') escaped = '\v';
+                    else if (next == 'f') escaped = '\f';
+                    tokens.push_back(Token(escaped, CHAR));
+                } else {
+                    tokens.push_back(Token(regex[i], CHAR));
+                }
+                i++;
+            }
+            if (i == regex.size()) throw std::runtime_error("Unmatched \"");
         } else if (c == '(' || c == ')' || c == '*' || c == '+' || c == '?' || c == '|') {
             tokens.push_back(Token(c, OPERATOR));
+        } else if (c == '/') {
+            // Trailing context operator: r1/r2 = match r1 only when followed by r2
+            tokens.push_back(Token('/', TRAILING_CONTEXT_OP));
         } else if (c == '.') {
              // Dot is a special charset (all except \n)
              std::set<int> dotSet;
@@ -226,9 +258,12 @@ std::vector<Token> RegexParser::_addExplicitConcat(const std::vector<Token> &tok
             const Token &next = tokens[i+1];
             
             bool currIsOperand = (curr.type == CHAR || curr.type == CHARSET || curr.type == ANCHOR_START || curr.type == ANCHOR_END || (curr.type == OPERATOR && (curr.c == ')' || curr.c == '*' || curr.c == '+' || curr.c == '?')));
+            // For next: ANCHOR_START and TRAILING_CONTEXT_OP following an operand also need concat
             bool nextIsOperand = (next.type == CHAR || next.type == CHARSET || next.type == ANCHOR_END || (next.type == OPERATOR && next.c == '('));
+            // ANCHOR_START at the start of a group needs concat too
+            bool nextIsAnchorStart = (next.type == ANCHOR_START);
 
-            if (currIsOperand && nextIsOperand) {
+            if (currIsOperand && (nextIsOperand || nextIsAnchorStart)) {
                 result.push_back(Token(CONCAT_OP, OPERATOR));
             }
         }
@@ -237,6 +272,8 @@ std::vector<Token> RegexParser::_addExplicitConcat(const std::vector<Token> &tok
 }
 
 int RegexParser::_getPrecedence(const Token &t) {
+    if (t.type == TRAILING_CONTEXT_OP)
+        return 0; // Lowest — separates r1 and r2 below alternation
     if (t.type != OPERATOR) {
         return 0;
     }

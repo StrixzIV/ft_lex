@@ -28,15 +28,15 @@ all: clang $(NAME) $(LIBL)
 $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-$(GENERATED_SRC): $(TEMPLATE_FILE)
-	@echo "🛠️ Generating C++ source from $< ..."
+$(GENERATED_SRC): $(TEMPLATE_C_FILE) $(TEMPLATE_PY_FILE)
+	@echo "🛠️ Generating C++ source from templates..."
 	@{ \
 		echo '#include <cstddef>'; \
-		\
-		echo '// --- Embedded C Template (template/template.c) ---'; \
+		echo ""; \
+		echo "// --- Embedded C Template (template/template.c) ---"; \
 		xxd -i $(TEMPLATE_C_FILE) | sed 's/unsigned char template_template_c/extern const unsigned char TEMPLATE_C_START/g; s/unsigned int template_template_c_len/extern const std::size_t TEMPLATE_C_SIZE/g'; \
-		\
-		echo '// --- Embedded Python Template (template/template.py) ---'; \
+		echo ""; \
+		echo "// --- Embedded Python Template (template/template.py) ---"; \
 		xxd -i $(TEMPLATE_PY_FILE) | sed 's/unsigned char template_template_py/extern const unsigned char TEMPLATE_PY_START/g; s/unsigned int template_template_py_len/extern const std::size_t TEMPLATE_PY_SIZE/g'; \
 	} > $@
 

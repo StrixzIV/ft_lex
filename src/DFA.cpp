@@ -34,7 +34,7 @@ DFA DFA::fromNFA(const NFA &nfa, int &dfaStateCounter) {
     }
     startDFA->nfaStates = startIds;
 
-    // Check acceptance
+    // Check acceptance and trailing context boundary
     int winningPriority = -1;
     for (const auto &s : startSet) {
         if (s->isAccepting) {
@@ -45,6 +45,8 @@ DFA DFA::fromNFA(const NFA &nfa, int &dfaStateCounter) {
                 startDFA->action = s->action;
             }
         }
+        if (s->trailingContextBoundary)
+            startDFA->trailingContextBoundary = true;
     }
     
     dfa.start = startDFA;
@@ -89,7 +91,7 @@ DFA DFA::fromNFA(const NFA &nfa, int &dfaStateCounter) {
         auto currentDFA = worklist.front();
         worklist.pop();
 
-        std::set<char> inputs;
+        std::set<int> inputs;
         
         // Reconstruct current Set of State*
         std::set<std::shared_ptr<State>> currentSet;
@@ -104,7 +106,7 @@ DFA DFA::fromNFA(const NFA &nfa, int &dfaStateCounter) {
             }
         }
 
-        for (char c : inputs) {
+        for (int c : inputs) {
             std::set<std::shared_ptr<State>> moveSet = _move(currentSet, c);
             std::set<std::shared_ptr<State>> closureSet = _epsilonClosure(moveSet);
 
@@ -121,7 +123,7 @@ DFA DFA::fromNFA(const NFA &nfa, int &dfaStateCounter) {
                 auto newDFA = std::make_shared<DFAState>(dfaStateCounter++);
                 newDFA->nfaStates = nextIds;
                 
-                // Acceptance logic
+                // Acceptance logic and trailing context propagation
                 int winP = -1;
                 for (const auto &s : closureSet) {
                     if (s->isAccepting) {
@@ -132,6 +134,8 @@ DFA DFA::fromNFA(const NFA &nfa, int &dfaStateCounter) {
                             newDFA->action = s->action;
                         }
                     }
+                    if (s->trailingContextBoundary)
+                        newDFA->trailingContextBoundary = true;
                 }
 
                 dfa.states.push_back(newDFA);
@@ -170,7 +174,7 @@ std::set<std::shared_ptr<State>> DFA::_epsilonClosure(const std::set<std::shared
     return closure;
 }
 
-std::set<std::shared_ptr<State>> DFA::_move(const std::set<std::shared_ptr<State>> &states, char c) {
+std::set<std::shared_ptr<State>> DFA::_move(const std::set<std::shared_ptr<State>> &states, int c) {
     std::set<std::shared_ptr<State>> result;
     for (const auto &s : states) {
         auto range = s->transitions.equal_range(c);

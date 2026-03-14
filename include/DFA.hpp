@@ -27,10 +27,11 @@ struct DFAState {
     bool isAccepting;
     int priority; // Winning priority
     std::string action;
+    bool trailingContextBoundary; // is end-of-r1 in a trailing context rule?
 
-    std::map<char, std::shared_ptr<DFAState>> transitions;
+    std::map<int, std::shared_ptr<DFAState>> transitions;
 
-    DFAState(int id) : id(id), isAccepting(false), priority(-1) {}
+    DFAState(int id) : id(id), isAccepting(false), priority(-1), trailingContextBoundary(false) {}
 };
 
 class DFA {
@@ -43,7 +44,7 @@ class DFA {
 
     private:
         static std::set<std::shared_ptr<State>> _epsilonClosure(const std::set<std::shared_ptr<State>> &states);
-        static std::set<std::shared_ptr<State>> _move(const std::set<std::shared_ptr<State>> &states, char c);
+        static std::set<std::shared_ptr<State>> _move(const std::set<std::shared_ptr<State>> &states, int c);
 
 };
 

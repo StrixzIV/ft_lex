@@ -29,6 +29,10 @@ NFA NFA::fromRegex(const std::vector<Token> &postfix, int &stateCounter) {
             stack.push(makeChar(256, stateCounter));
         } else if (token.type == ANCHOR_END) {
             stack.push(makeChar(257, stateCounter));
+        } else if (token.type == TRAILING_CONTEXT_OP) {
+            NFA r2 = stack.top(); stack.pop();
+            NFA r1 = stack.top(); stack.pop();
+            stack.push(makeTrailingContext(r1, r2, stateCounter));
         } else if (token.type == OPERATOR) {
             switch (token.c) {
                 case RegexParser::CONCAT_OP: {
@@ -193,4 +197,19 @@ NFA NFA::makeAnyChar(int &stateCounter) {
         }
     }
     return NFA(start, end);
+}
+
+NFA NFA::makeTrailingContext(NFA r1, NFA r2, int &stateCounter) {
+    (void)stateCounter;
+    // Mark r1's accept state as the trailing context boundary.
+    // This tells the DFA/generator that when this state is reached,
+    // it represents the end-of-r1 position to roll back to.
+    r1.accept->trailingContextBoundary = true;
+    r1.accept->isAccepting = false; // not a final accept — must continue to match r2
+    
+    // Connect r1's boundary state to r2's start via epsilon
+    r1.accept->epsilonTransitions.push_back(r2.start);
+    
+    // The combined NFA spans r1.start -> ... -> r1.accept (boundary) -> r2 -> r2.accept
+    return NFA(r1.start, r2.accept);
 }

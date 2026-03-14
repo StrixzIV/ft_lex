@@ -34,6 +34,7 @@ class AGenerator {
         virtual std::string generateHeader(const LexerParser &parser) = 0;
         virtual std::string generateTables(const std::vector<DFA> &dfas, const LexerParser &parser) = 0;
         virtual std::string generateLexerBody(const LexerParser &parser) = 0;
+        virtual std::string generateEofActions(const LexerParser &parser) = 0;
         virtual std::string generateUserCode(const LexerParser &parser) = 0;
         
         std::string loadTemplate(const std::string &template_key);
