@@ -8,6 +8,10 @@ class Lexer:
     
 __TABLES_PLACEHOLDER__
 
+__YYLEX_BODY_PLACEHOLDER__
+
+__EOF_ACTION_PLACEHOLDER__
+
     def __init__(self, input_stream=sys.stdin):
         """
         Initializes the lexer.
@@ -19,6 +23,7 @@ __TABLES_PLACEHOLDER__
         self.yylineno = 1
         self.yy_start = 0
         self.yy_at_bol = True
+        self.yy_more_flag = False
         self.pushback_buffer = []  # Stack for unreading characters
 
     def BEGIN(self, state):
@@ -56,8 +61,8 @@ __TABLES_PLACEHOLDER__
         self.yytext = self.yytext[:n]
         self.yyleng = n
 
-    def _do_eof_action(self, cond_idx):
-        return None # Placeholder, overridden by generator
+    def yymore(self):
+        self.yy_more_flag = True
 
     def yylex(self):
         """
@@ -70,56 +75,65 @@ __TABLES_PLACEHOLDER__
             last_accepting_state = -1
             
             buffer = []
+            if self.yy_more_flag:
+                buffer = list(self.yytext)
+                self.yy_more_flag = False
+            
             last_accepting_idx = -1
             
             # Read first char
             c = self.read_char()
             if c is None:
-                ret = self._do_eof_action(self.yy_start)
-                if ret is not None: return ret
-                return 0  # EOF
+                if not buffer:
+                    ret = self._do_eof_action(self.yy_start)
+                    if ret is not None: return ret
+                    return 0  # EOF
+                else:
+                    # We have content from yymore but hit EOF
+                    c = "" # treat as empty to trigger logic below
             
-            # Check for BOL anchor (256)
-            if self.yy_at_bol:
-                anchor_state = self.YY_NXT[current_state][256]
-                if anchor_state != -1:
-                    current_state = anchor_state
-                    if self.YY_ACCEPT[current_state] != -1:
-                        last_accepting_state = current_state
-                        last_accepting_idx = 0
-
-            buffer.append(c)
-            
-            # Initial transition
-            char_code = ord(c) if 0 <= ord(c) < 256 else 0
-            next_state = self.YY_NXT[current_state][char_code]
-            
-            while next_state != -1:
-                current_state = next_state
-                
-                if self.YY_ACCEPT[current_state] != -1:
-                    last_accepting_state = current_state
-                    last_accepting_idx = len(buffer)
-                
-                c = self.read_char()
-                if c is None:
-                    # Check for EOL anchor (257) on EOF
-                    eol_state = self.YY_NXT[current_state][257]
-                    if eol_state != -1 and self.YY_ACCEPT[eol_state] != -1:
-                        last_accepting_state = eol_state
-                        last_accepting_idx = len(buffer)
-                    break
-                
-                if c == '\n':
-                    # Check for EOL anchor (257)
-                    eol_state = self.YY_NXT[current_state][257]
-                    if eol_state != -1 and self.YY_ACCEPT[eol_state] != -1:
-                        last_accepting_state = eol_state
-                        last_accepting_idx = len(buffer)
+            if c:
+                # Check for BOL anchor (256)
+                if self.yy_at_bol:
+                    anchor_state = self.YY_NXT[current_state][256]
+                    if anchor_state != -1:
+                        current_state = anchor_state
+                        if self.YY_ACCEPT[current_state] != -1:
+                            last_accepting_state = current_state
+                            last_accepting_idx = len(buffer)
 
                 buffer.append(c)
+                
+                # Initial transition
                 char_code = ord(c) if 0 <= ord(c) < 256 else 0
                 next_state = self.YY_NXT[current_state][char_code]
+                
+                while next_state != -1:
+                    current_state = next_state
+                    
+                    if self.YY_ACCEPT[current_state] != -1:
+                        last_accepting_state = current_state
+                        last_accepting_idx = len(buffer)
+                    
+                    c = self.read_char()
+                    if c is None:
+                        # Check for EOL anchor (257) on EOF
+                        eol_state = self.YY_NXT[current_state][257]
+                        if eol_state != -1 and self.YY_ACCEPT[eol_state] != -1:
+                            last_accepting_state = eol_state
+                            last_accepting_idx = len(buffer)
+                        break
+                    
+                    if c == '\n':
+                        # Check for EOL anchor (257)
+                        eol_state = self.YY_NXT[current_state][257]
+                        if eol_state != -1 and self.YY_ACCEPT[eol_state] != -1:
+                            last_accepting_state = eol_state
+                            last_accepting_idx = len(buffer)
+
+                    buffer.append(c)
+                    char_code = ord(c) if 0 <= ord(c) < 256 else 0
+                    next_state = self.YY_NXT[current_state][char_code]
             
             # No more transitions
             if last_accepting_state != -1:
@@ -127,13 +141,17 @@ __TABLES_PLACEHOLDER__
                 while len(buffer) > last_accepting_idx:
                     self.unread_char(buffer.pop())
                 
-                self.yytext = "".join(buffer)
-                self.yyleng = len(buffer)
+                matched_text = "".join(buffer)
                 
-                # Update BOL and lineno
-                for char in self.yytext:
-                    if char == '\n':
+                # Update BOL and lineno for the NEWLY matched part only?
+                # Actually, self.yytext was already accounted for.
+                new_part_start = len(self.yytext) if matched_text.startswith(self.yytext) else 0
+                for i in range(new_part_start, len(matched_text)):
+                    if matched_text[i] == '\n':
                         self.yylineno += 1
+                
+                self.yytext = matched_text
+                self.yyleng = len(self.yytext)
                 
                 if self.yytext:
                     self.yy_at_bol = (self.yytext[-1] == '\n')
@@ -144,6 +162,7 @@ __TABLES_PLACEHOLDER__
 
             else:
                 # No match. Echo first char and unput everything else.
+                if not buffer: return 0 # EOF
                 sys.stdout.write(buffer[0])
                 sys.stdout.flush()
                 if buffer[0] == '\n':
@@ -153,8 +172,6 @@ __TABLES_PLACEHOLDER__
                     self.yy_at_bol = False
                 while len(buffer) > 1:
                     self.unread_char(buffer.pop())
-
-__YYLEX_BODY_PLACEHOLDER__
 
 __USER_CODE_PLACEHOLDER__
 

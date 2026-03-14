@@ -43,12 +43,16 @@ static std::string _cleanAction(std::string action) {
             pos += 11;
         } else pos += 6;
     }
-    pos = 0;
-    while ((pos = action.find("yyleng", pos)) != std::string::npos) {
-        if (pos == 0 || (!std::isalnum(action[pos-1]) && action[pos-1] != '_')) {
-            action.replace(pos, 6, "self.yyleng");
-            pos += 11;
-        } else pos += 6;
+    // Replace yymore/input/unput/yyless with self.yymore/self.input/self.unput/self.yyless
+    std::vector<std::string> funcs = {"yymore", "input", "unput", "yyless"};
+    for (const auto& f : funcs) {
+        pos = 0;
+        while ((pos = action.find(f, pos)) != std::string::npos) {
+            if (pos == 0 || (!std::isalnum(action[pos-1]) && action[pos-1] != '_')) {
+                action.replace(pos, f.size(), "self." + f);
+                pos += f.size() + 5;
+            } else pos += f.size();
+        }
     }
 
     return action;
