@@ -6,11 +6,11 @@
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/13 01:26:45 by jikaewsi          #+#    #+#             */
-/*   Updated: 2025/12/13 01:28:00 by jikaewsi         ###   ########.fr       */
+/*   Updated: 2026/03/14 11:57:14 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "CGenerator.hpp"
+#include "../include/CGenerator.hpp"
 
 #include <sstream>
 #include <map>

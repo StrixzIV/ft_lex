@@ -1,21 +1,20 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   ft_lex.h                                           :+:      :+:    :+:   */
+/*   libl.h                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/03/14 00:00:00 by jikaewsi          #+#    #+#             */
-/*   Updated: 2026/03/14 00:00:00 by jikaewsi         ###   ########.fr       */
+/*   Created: 2026/03/14 11:53:00 by jikaewsi          #+#    #+#             */
+/*   Updated: 2026/03/14 11:56:16 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef FT_LEX_H
-# define FT_LEX_H
+#ifndef LIBL_H
+# define LIBL_H
 
 # include <stdio.h>
-# include <stdint.h>
-# include <stddef.h>
+# include <string.h>
 
 /* --- Shared variables --- */
 
@@ -34,7 +33,7 @@ extern int yy_buf_len;
 extern int yy_buf_pos;
 extern int yy_buf_cap;
 
-extern uint8_t yy_hold_char;
+extern unsigned char yy_hold_char;
 extern int yy_hold_char_restored;
 
 extern int yy_more_flag;

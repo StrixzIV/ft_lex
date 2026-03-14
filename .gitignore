@@ -44,5 +44,6 @@ ft_lex
 compile_commands.json
 .cache
 lex.yy.*
+libl
 
 **/*.template.cpp

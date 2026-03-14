@@ -17,14 +17,14 @@
 #include <vector>
 #include <unistd.h>
 
-#include "LexerParser.hpp"
-#include "NFA.hpp"
-#include "DFA.hpp"
-#include "RegexParser.hpp"
+#include "../include/LexerParser.hpp"
+#include "../include/NFA.hpp"
+#include "../include/DFA.hpp"
+#include "../include/RegexParser.hpp"
 
-#include "AGenerator.hpp"
-#include "CGenerator.hpp"
-#include "PythonGenerator.hpp"
+#include "../include/AGenerator.hpp"
+#include "../include/CGenerator.hpp"
+#include "../include/PythonGenerator.hpp"
 
 void print_usage(const char* prog) {
     std::cerr << "Usage: " << prog << " [-vntc] [-o file] [-l lang] <lexer.l>...\n";

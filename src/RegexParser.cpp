@@ -10,9 +10,9 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "RegexParser.hpp"
+#include "../include/RegexParser.hpp"
+
 #include <stack>
-#include <iostream>
 #include <stdexcept>
 
 std::vector<Token> RegexParser::toPostfix(const std::string &regex) {

@@ -1,8 +1,9 @@
 NAME        = ft_lex
 LIBL        = libl.a
+LIBL_LD		= libl
 
 CC          = clang
-CFLAGS      = -Wall -Wextra -Werror -Ilibl
+CFLAGS      = -Wall -Wextra -Werror -Isrc/libl
 
 CXX         = clang++
 CXXFLAGS    = -Wall -Wextra -Werror -std=c++17 -Iinclude
@@ -10,7 +11,7 @@ CXXFLAGS    = -Wall -Wextra -Werror -std=c++17 -Iinclude
 SRC_DIR     	= src
 OBJ_DIR    	 	= obj
 TEMPLATE_DIR 	= template
-LIBL_DIR    	= libl
+LIBL_DIR    	= src/libl
 
 TEMPLATE_C_FILE = template/template.c
 TEMPLATE_PY_FILE = template/template.py
@@ -23,7 +24,7 @@ OBJS        = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS)) $(GENERATED_
 LIBL_SRCS   = $(wildcard $(LIBL_DIR)/*.c)
 LIBL_OBJS   = $(patsubst $(LIBL_DIR)/%.c, $(OBJ_DIR)/libl_%.o, $(LIBL_SRCS))
 
-all: clang $(NAME) $(LIBL)
+all: clang $(NAME) $(LIBL) $(LIBL_LD)
 
 $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
@@ -46,6 +47,10 @@ $(GENERATED_OBJ): $(GENERATED_SRC) | $(OBJ_DIR)
 
 $(LIBL): $(LIBL_OBJS)
 	ar rcs $@ $^
+
+$(LIBL_LD): $(LIBL)
+	@echo "Symlinking $(LIBL) to $(LIBL_LD)..."
+	ln -sf $(LIBL) $(LIBL_LD)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
@@ -78,7 +83,7 @@ test-clean:
 	rm -f lex.yy.c lexer_test lexer out.txt test_yyless.l
 
 fclean: clean test-clean
-	rm -f $(NAME) $(LIBL)
+	rm -f $(NAME) $(LIBL) $(LIBL_LD)
 
 re: fclean all
 

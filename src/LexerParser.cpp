@@ -10,7 +10,8 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "LexerParser.hpp"
+#include "../include/LexerParser.hpp"
+
 #include <fstream>
 #include <sstream>
 #include <iostream>

@@ -37,7 +37,7 @@ run_test() {
     fi
 
     # 2. Compile lexer
-    clang -Wall -Wextra -Werror -Ilibl "$GEN_C" "$LIBL" -o "$OUT_BIN" > /dev/null 2>&1
+    clang -Wall -Wextra -Werror -Isrc/libl "$GEN_C" "$LIBL" -o "$OUT_BIN" > /dev/null 2>&1
     if [ $? -ne 0 ]; then
         echo -e "${RED}FAILED (Compilation)${NC}"
         rm "$GEN_C" 2>/dev/null
@@ -76,7 +76,7 @@ run_multi_test() {
     fi
 
     # 2. Compile lexer
-    clang -Wall -Wextra -Werror -Ilibl "$GEN_C" "$LIBL" -o "$OUT_BIN" > /dev/null 2>&1
+    clang -Wall -Wextra -Werror -Isrc/libl "$GEN_C" "$LIBL" -o "$OUT_BIN" > /dev/null 2>&1
     if [ $? -ne 0 ]; then
         echo -e "${RED}FAILED (Compilation)${NC}"
         rm "$GEN_C" 2>/dev/null

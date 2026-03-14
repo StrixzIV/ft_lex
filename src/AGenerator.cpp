@@ -6,15 +6,15 @@
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/13 01:23:08 by jikaewsi          #+#    #+#             */
-/*   Updated: 2025/12/13 01:45:06 by jikaewsi         ###   ########.fr       */
+/*   Updated: 2026/03/14 11:56:59 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "utils.hpp"
-#include "template.hpp"
-#include "AGenerator.hpp"
-#include "CGenerator.hpp"
-#include "PythonGenerator.hpp"
+#include "../include/utils.hpp"
+#include "../include/template.hpp"
+#include "../include/AGenerator.hpp"
+#include "../include/CGenerator.hpp"
+#include "../include/PythonGenerator.hpp"
 
 #include <string_view>
 

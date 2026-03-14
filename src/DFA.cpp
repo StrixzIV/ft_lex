@@ -10,11 +10,10 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "DFA.hpp"
+#include "../include/DFA.hpp"
+
 #include <queue>
 #include <stack>
-#include <algorithm>
-#include <iostream>
 
 DFA DFA::fromNFA(const NFA &nfa, int &dfaStateCounter) {
     DFA dfa;

@@ -10,8 +10,9 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "NFA.hpp"
-#include "RegexParser.hpp"
+#include "../include/NFA.hpp"
+#include "../include/RegexParser.hpp"
+
 #include <stack>
 #include <stdexcept>
 
