@@ -11,6 +11,7 @@ OUT_BIN="lexer_test"
 # Colors
 GREEN='\033[0;32m'
 RED='\033[0;31m'
+YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
 # Check if ft_lex and libl.a exist
@@ -53,7 +54,8 @@ run_test() {
             echo -e "${RED}FAILED (Runtime)${NC}"
         fi
     else
-        echo -e "${GREEN}PASSED (No data)${NC}"
+        ./"$OUT_BIN" < /dev/null > /dev/null 2>&1
+        echo -e "${GREEN}PASSED (Build only)${NC}"
     fi
 
     # Cleanup
@@ -92,22 +94,62 @@ run_multi_test() {
             echo -e "${RED}FAILED (Runtime)${NC}"
         fi
     else
-        echo -e "${GREEN}PASSED (No data)${NC}"
+        ./"$OUT_BIN" < /dev/null > /dev/null 2>&1
+        echo -e "${GREEN}PASSED (Build only)${NC}"
     fi
 
     # Cleanup
     rm "$GEN_C" "$OUT_BIN" 2>/dev/null
 }
 
+run_error_test() {
+    local l_file="$1"
+    local name=$(basename "$l_file" .l)
+
+    echo -n "Testing error handling ($name)... "
+
+    # Generate C code - EXPECTED TO FAIL
+    $FT_LEX -o "$GEN_C" "$l_file" > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo -e "${GREEN}PASSED (Caught expected error)${NC}"
+        return 0
+    else
+        echo -e "${RED}FAILED (Error not caught)${NC}"
+        rm "$GEN_C" 2>/dev/null
+        return 1
+    fi
+}
+
 # Only run all tests if not being sourced
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     check_deps || exit 1
+    
+    echo -e "${YELLOW}--- Passing Tests ---${NC}"
     run_test "$PARSER_DIR/minimal.l" "$DATA_DIR/minimal.txt"
     run_test "$PARSER_DIR/anchors.l" "$DATA_DIR/anchors.txt"
     run_test "$PARSER_DIR/charclass.l" "$DATA_DIR/charclass.txt"
-    run_test "$PARSER_DIR/simple_test.l" ""
-    run_test "$PARSER_DIR/valid.l" ""
     run_test "$PARSER_DIR/regex_test.l" "$DATA_DIR/regex_test.txt"
+    run_test "$PARSER_DIR/simple_test.l" ""
+    run_test "$PARSER_DIR/states.l" ""
+    run_test "$PARSER_DIR/definitions.l" ""
+    run_test "$PARSER_DIR/counter.l" ""
+    run_test "$PARSER_DIR/eof.l" ""
+    run_test "$PARSER_DIR/multiline.l" ""
+    run_test "$PARSER_DIR/no_user_code.l" ""
+    run_test "$PARSER_DIR/posix_test.l" ""
+    run_test "$PARSER_DIR/test.l" ""
+    run_test "$PARSER_DIR/trailing.l" ""
+    run_test "$PARSER_DIR/valid.l" ""
+    
+    echo -e "\n${YELLOW}--- Multi-file Tests ---${NC}"
     run_multi_test "combined" "$DATA_DIR/multi.txt" "$PARSER_DIR/multi_1.l" "$PARSER_DIR/multi_2.l"
-    echo "Done."
+    
+    echo -e "\n${YELLOW}--- Error Handling Tests ---${NC}"
+    run_error_test "$PARSER_DIR/error_test.l"
+    run_error_test "$PARSER_DIR/error_test_delim.l"
+    run_error_test "$PARSER_DIR/error_test_fragment.l"
+    run_error_test "$PARSER_DIR/error_test_sc.l"
+    run_error_test "$PARSER_DIR/missing_delim.l"
+
+    echo -e "\n${YELLOW}--- Done ---${NC}"
 fi

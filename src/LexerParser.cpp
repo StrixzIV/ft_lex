@@ -329,7 +329,15 @@ void LexerParser::_parseRules() {
                     size_t s = state.find_first_not_of(" \t");
                     size_t e = state.find_last_not_of(" \t");
                     if (s != std::string::npos && e != std::string::npos) {
-                        rule.startConditions.push_back(state.substr(s, e - s + 1));
+                        std::string scName = state.substr(s, e - s + 1);
+                        if (scName != "*") {
+                            bool found = false;
+                            for (const auto& sc : _startConditions) {
+                                if (sc.name == scName) { found = true; break; }
+                            }
+                            if (!found) throw std::runtime_error(formatError(currentLine, currentCol + (int)s + 1, "unknown start condition '" + scName + "'"));
+                        }
+                        rule.startConditions.push_back(scName);
                     }
                 }
                 advance(endAngle - currentPos + 1);
@@ -455,6 +463,11 @@ void LexerParser::_parseRules() {
         }
 
         _rulesList.push_back(rule);
+
+        // --- Skip rest of line after action ---
+        while (currentPos < _content.size() && _content[currentPos] != '\n') {
+            advance(1);
+        }
     }
 
 end_rules:;
