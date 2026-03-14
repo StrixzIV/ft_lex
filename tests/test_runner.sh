@@ -107,6 +107,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     run_test "$PARSER_DIR/charclass.l" "$DATA_DIR/charclass.txt"
     run_test "$PARSER_DIR/simple_test.l" ""
     run_test "$PARSER_DIR/valid.l" ""
+    run_test "$PARSER_DIR/regex_test.l" "$DATA_DIR/regex_test.txt"
     run_multi_test "combined" "$DATA_DIR/multi.txt" "$PARSER_DIR/multi_1.l" "$PARSER_DIR/multi_2.l"
     echo "Done."
 fi

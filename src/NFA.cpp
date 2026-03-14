@@ -34,6 +34,9 @@ NFA NFA::fromRegex(const std::vector<Token> &postfix, int &stateCounter) {
             NFA r2 = stack.top(); stack.pop();
             NFA r1 = stack.top(); stack.pop();
             stack.push(makeTrailingContext(r1, r2, stateCounter));
+        } else if (token.type == INTERVAL) {
+            NFA nfa = stack.top(); stack.pop();
+            stack.push(makeRepeat(nfa, token.min, token.max, stateCounter));
         } else if (token.type == OPERATOR) {
             switch (token.c) {
                 case RegexParser::CONCAT_OP: {
@@ -213,4 +216,74 @@ NFA NFA::makeTrailingContext(NFA r1, NFA r2, int &stateCounter) {
     
     // The combined NFA spans r1.start -> ... -> r1.accept (boundary) -> r2 -> r2.accept
     return NFA(r1.start, r2.accept);
+}
+
+static std::shared_ptr<State> _copyState(std::shared_ptr<State> s, std::map<int, std::shared_ptr<State>> &clones, int &stateCounter) {
+    if (clones.count(s->id)) return clones[s->id];
+    auto clone = std::make_shared<State>(stateCounter++);
+    clone->isAccepting = s->isAccepting;
+    clone->priority = s->priority;
+    clone->action = s->action;
+    clone->trailingContextBoundary = s->trailingContextBoundary;
+    clones[s->id] = clone;
+
+    for (auto const& [c, next] : s->transitions) {
+        clone->transitions[c] = _copyState(next, clones, stateCounter);
+    }
+    for (auto const& next : s->epsilonTransitions) {
+        clone->epsilonTransitions.push_back(_copyState(next, clones, stateCounter));
+    }
+    return clone;
+}
+
+NFA NFA::copy(int &stateCounter) const {
+    std::map<int, std::shared_ptr<State>> clones;
+    auto newStart = _copyState(start, clones, stateCounter);
+    auto newAccept = clones[accept->id];
+    return NFA(newStart, newAccept);
+}
+
+NFA NFA::makeRepeat(NFA nfa, int min, int max, int &stateCounter) {
+    if (min == 0 && max == 0) {
+        auto s = std::make_shared<State>(stateCounter++);
+        auto e = std::make_shared<State>(stateCounter++);
+        s->epsilonTransitions.push_back(e);
+        return NFA(s, e);
+    }
+
+    // Handle min occurrences
+    NFA res(nullptr, nullptr);
+    if (min > 0) {
+        res = nfa.copy(stateCounter);
+        for (int i = 1; i < min; ++i) {
+            res = makeConcat(res, nfa.copy(stateCounter));
+        }
+    } else {
+        // min == 0, we'll handle below
+    }
+
+    if (max == -1) { // {n,}
+        NFA kleene = makeKleene(nfa.copy(stateCounter), stateCounter);
+        if (min == 0) return kleene;
+        return makeConcat(res, kleene);
+    } else if (max > min) { // {n,m}
+        for (int i = min; i < max; ++i) {
+            NFA opt = makeOption(nfa.copy(stateCounter), stateCounter);
+            if (res.start == nullptr) res = opt;
+            else res = makeConcat(res, opt);
+        }
+    } else if (min == 0 && max == 0) {
+         // Already handled
+    }
+
+    if (res.start == nullptr) {
+        // This would happen if min=0, max=0 (already handled) 
+        // or potentially other weird cases.
+        auto s = std::make_shared<State>(stateCounter++);
+        auto e = std::make_shared<State>(stateCounter++);
+        s->epsilonTransitions.push_back(e);
+        return NFA(s, e);
+    }
+
+    return res;
 }

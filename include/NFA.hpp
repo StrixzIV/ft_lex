@@ -60,6 +60,9 @@ public:
     static NFA makeOption(NFA nfa, int &stateCounter);
     static NFA makeAnyChar(int &stateCounter);
     static NFA makeTrailingContext(NFA r1, NFA r2, int &stateCounter);
+    static NFA makeRepeat(NFA nfa, int min, int max, int &stateCounter);
+
+    NFA copy(int &stateCounter) const;
 
 };
 

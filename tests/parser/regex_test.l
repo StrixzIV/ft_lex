@@ -1,11 +1,6 @@
-%{
-#include <stdio.h>
-%}
-
 %%
-(a|b)*abb   { printf("Action 1\n"); }
-ab+c?         { printf("Action 2\n"); }
-a(b|c)*d      { printf("Action 3\n"); }
+[[:digit:]]+ { printf("DIGITS[%s]", yytext); }
+[[:alpha:]]{3}  { printf("ALPHA3[%s]", yytext); }
+[A-Z]{1,2}      { printf("UPPER12[%s]", yytext); }
+.               { printf("%s", yytext); }
 %%
-
-int main() { yylex(); }
