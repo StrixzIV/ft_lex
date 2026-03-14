@@ -27,7 +27,7 @@
 #include "PythonGenerator.hpp"
 
 void print_usage(const char* prog) {
-    std::cerr << "Usage: " << prog << " [-t] [-o file] [-l lang] <lexer.l>\n";
+    std::cerr << "Usage: " << prog << " [-t] [-o file] [-l lang] <lexer.l>...\n";
     std::cerr << "  -t: Write generated code to stdout\n";
     std::cerr << "  -o file: Write generated code to 'file' (default: lex.yy.c or lex.yy.py)\n";
     std::cerr << "  -l lang: Target language 'c' or 'python' (default: c)\n";
@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
     bool to_stdout = false;
     std::string target_lang = "c";
     std::string output_filename = "";
-    std::string input_filename = "";
+    std::vector<std::string> input_filenames;
 
     int opt;
     while ((opt = getopt(argc, argv, "to:l:")) != -1) {
@@ -62,7 +62,10 @@ int main(int argc, char** argv) {
         print_usage(argv[0]);
         return 1;
     }
-    input_filename = argv[optind];
+
+    for (int i = optind; i < argc; ++i) {
+        input_filenames.push_back(argv[i]);
+    }
 
     if (target_lang != "c" && target_lang != "python") {
         std::cerr << "Error: Unsupported target language '" << target_lang << "'. Use 'c' or 'python'.\n";
@@ -75,7 +78,7 @@ int main(int argc, char** argv) {
 
     try {
 
-        LexerParser parser(input_filename);
+        LexerParser parser(input_filenames);
         parser.parse();
 
         int stateCounter = 0;
@@ -85,7 +88,7 @@ int main(int argc, char** argv) {
         const auto& startConds = parser.getStartConditions();
         const auto& rules = parser.getRulesList();
 
-        std::cout << "ft_lex: Processing " << input_filename << " for target '" << target_lang << "'...\n";
+        std::cout << "ft_lex: Processing " << input_filenames.size() << " files for target '" << target_lang << "'...\n";
         std::cout << "ft_lex: Parsed " << rules.size() << (rules.size() == 1 ? " rule" : " rules") 
                   << " across " << startConds.size() << " start conditions.\n";
 
@@ -144,7 +147,7 @@ int main(int argc, char** argv) {
                         bolStart->epsilonTransitions.push_back(nfa.start);
                     }
                 } catch (const std::exception& e) {
-                    std::cerr << input_filename << ":" << rule.lineNo << ": error: " << e.what() << "\n";
+                    std::cerr << "Lexer:" << rule.lineNo << ": error: " << e.what() << "\n";
                     return 1;
                 }
 

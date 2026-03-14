@@ -34,7 +34,7 @@ public:
         bool isExclusive;
     };
 
-    LexerParser(const std::string &filename);
+    LexerParser(const std::vector<std::string> &filenames);
     ~LexerParser() = default;
 
     void parse();
@@ -48,7 +48,7 @@ public:
     const std::map<int, std::string> &getEofActions() const;
     
 private:
-    std::string _filename;
+    std::vector<std::string> _filenames;
     std::string _content;
     std::string _definitions;
     std::string _rules;

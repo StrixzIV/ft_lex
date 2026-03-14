@@ -15,7 +15,7 @@
 #include <sstream>
 #include <iostream>
 
-LexerParser::LexerParser(const std::string &filename) : _filename(filename), _lineNo(1) {
+LexerParser::LexerParser(const std::vector<std::string> &filenames) : _filenames(filenames), _lineNo(1) {
     _startConditions.push_back({"INITIAL", false}); // Default start condition
 }
 
@@ -33,15 +33,21 @@ const std::string &LexerParser::getUserCode() const {
 
 void LexerParser::_readFile() {
 
-    std::ifstream file(_filename);
+    _content = "";
+    for (const auto &filename : _filenames) {
+        std::ifstream file(filename);
 
-    if (!file.is_open()) {
-        throw std::runtime_error("Could not open file: " + _filename);
+        if (!file.is_open()) {
+            throw std::runtime_error("Could not open file: " + filename);
+        }
+
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        _content += buffer.str();
+        if (!_content.empty() && _content.back() != '\n') {
+            _content += '\n'; // Ensure each file ends with a newline before concatenation
+        }
     }
-
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    _content = buffer.str();
 
 }
 
@@ -50,7 +56,7 @@ void LexerParser::_splitSections() {
     size_t first_sep_pos = _content.find("%%");
 
     if (first_sep_pos == std::string::npos) {
-        throw std::runtime_error(_filename + ":1: error: Missing first '%%' delimiter");
+        throw std::runtime_error("Lexer: error: Missing first '%%' delimiter");
     }
 
     std::string rawDefs = _content.substr(0, first_sep_pos);
@@ -298,7 +304,7 @@ void LexerParser::_parseRules() {
                         }
                     }
                     if (!found) {
-                        std::cerr << _filename << ":" << _lineNo << ": warning: unknown start condition '" << sc << "'\n";
+                        std::cerr << "Lexer:" << _lineNo << ": warning: unknown start condition '" << sc << "'\n";
                     }
                 }
             }
