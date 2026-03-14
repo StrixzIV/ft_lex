@@ -27,7 +27,10 @@
 #include "PythonGenerator.hpp"
 
 void print_usage(const char* prog) {
-    std::cerr << "Usage: " << prog << " [-t] [-o file] [-l lang] <lexer.l>...\n";
+    std::cerr << "Usage: " << prog << " [-vntc] [-o file] [-l lang] <lexer.l>...\n";
+    std::cerr << "  -v: Write a summary of scanner statistics to stderr\n";
+    std::cerr << "  -n: No-op for POSIX compliance (suppress summary)\n";
+    std::cerr << "  -c: No-op for POSIX compliance (C output is default)\n";
     std::cerr << "  -t: Write generated code to stdout\n";
     std::cerr << "  -o file: Write generated code to 'file' (default: lex.yy.c or lex.yy.py)\n";
     std::cerr << "  -l lang: Target language 'c' or 'python' (default: c)\n";
@@ -36,13 +39,24 @@ void print_usage(const char* prog) {
 int main(int argc, char** argv) {
 
     bool to_stdout = false;
+    bool verbose = false;
+    bool suppress_summary = false;
     std::string target_lang = "c";
     std::string output_filename = "";
     std::vector<std::string> input_filenames;
 
     int opt;
-    while ((opt = getopt(argc, argv, "to:l:")) != -1) {
+    while ((opt = getopt(argc, argv, "vntco:l:")) != -1) {
         switch (opt) {
+            case 'v':
+                verbose = true;
+                break;
+            case 'n':
+                suppress_summary = true;
+                break;
+            case 'c':
+                target_lang = "c";
+                break;
             case 't':
                 to_stdout = true;
                 break;
@@ -88,9 +102,14 @@ int main(int argc, char** argv) {
         const auto& startConds = parser.getStartConditions();
         const auto& rules = parser.getRulesList();
 
-        std::cout << "ft_lex: Processing " << input_filenames.size() << " files for target '" << target_lang << "'...\n";
-        std::cout << "ft_lex: Parsed " << rules.size() << (rules.size() == 1 ? " rule" : " rules") 
-                  << " across " << startConds.size() << " start conditions.\n";
+        if (!suppress_summary) {
+            std::cout << "ft_lex: Processing " << input_filenames.size() << " files for target '" << target_lang << "'...\n";
+            std::cout << "ft_lex: Parsed " << rules.size() << (rules.size() == 1 ? " rule" : " rules") 
+                      << " across " << startConds.size() << " start conditions.\n";
+        }
+
+        size_t total_dfa_states = 0;
+        size_t total_dfa_transitions = 0;
 
         for (size_t c_idx = 0; c_idx < startConds.size(); ++c_idx) {
             auto masterStart = std::make_shared<State>(stateCounter++);
@@ -122,9 +141,6 @@ int main(int argc, char** argv) {
                     std::vector<Token> postfix = RegexParser::toPostfix(rule.regex);
                     
                     // Check if the rule has a BOL anchor at the very beginning
-                    // Postfix for ^abc is: ^, a, CONCAT, b, CONCAT, c, CONCAT
-                    // Actually ^ is the first token in prefix, but in postfix it depends.
-                    // Let's check the original regex for simplicity, or look at tokens.
                     bool hasBOL = (rule.regex.size() > 0 && rule.regex[0] == '^');
 
                     NFA nfa = NFA::fromRegex(postfix, stateCounter);
@@ -134,15 +150,8 @@ int main(int argc, char** argv) {
                     nfa.accept->action = rule.action;
                     
                     if (hasBOL) {
-                        // For rules with ^, they MUST start after the BOL pseudo-char 256.
-                        // But NFA::fromRegex already included the 256 transition if it saw ^.
-                        // Wait! If NFA::fromRegex includes 256, then nfa.start IS the state
-                        // that expects 256.
-                        // So we connect masterStart to nfa.start.
                         masterStart->epsilonTransitions.push_back(nfa.start);
                     } else {
-                        // For rules WITHOUT ^, they can start EITHER from masterStart
-                        // OR from bolStart (if we are at the beginning of a line).
                         masterStart->epsilonTransitions.push_back(nfa.start);
                         bolStart->epsilonTransitions.push_back(nfa.start);
                     }
@@ -157,7 +166,20 @@ int main(int argc, char** argv) {
             auto dummyAccept = std::make_shared<State>(stateCounter++);
             NFA masterNFA(masterStart, dummyAccept);
             DFA dfa = DFA::fromNFA(masterNFA, dfaStateCounter);
+            
+            total_dfa_states += dfa.states.size();
+            for (const auto& s : dfa.states) {
+                total_dfa_transitions += s->transitions.size();
+            }
+
             dfas.push_back(dfa);
+        }
+
+        if (verbose) {
+            std::cerr << "DFA Statistics:\n";
+            std::cerr << "  Total NFA states: " << stateCounter << "\n";
+            std::cerr << "  Total DFA states: " << total_dfa_states << "\n";
+            std::cerr << "  Total transitions: " << total_dfa_transitions << "\n";
         }
     
         std::unique_ptr<AGenerator> generator;
