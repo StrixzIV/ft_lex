@@ -1,12 +1,10 @@
 // Template for lex.yy.c generation. Placeholders start and end with __
 
-#include "libl.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-__HEADER_PLACEHOLDER__
-
-__TABLES_PLACEHOLDER__
-
-/* --- Internal state for yylex --- */
+/* --- Shared variables --- */
 
 FILE *yyin   = NULL;
 FILE *yyout  = NULL;
@@ -26,12 +24,26 @@ int    yy_buf_pos   = 0;
 int    yy_buf_cap   = 0;
 
 /* Hold-char mechanism for input()/unput()/yyless() */
-uint8_t yy_hold_char          = 0;
-int     yy_hold_char_restored = 1;
+unsigned char yy_hold_char          = 0;
+int           yy_hold_char_restored = 1;
 
 /* yymore() support */
 int yy_more_flag = 0;
 int yy_more_len  = 0;
+
+/* --- Library functions (provided by libl) --- */
+
+extern int yywrap(void);
+extern int yyless(int n);
+extern int input(void);
+extern int unput(int c);
+extern int yymore(void);
+
+#define BEGIN(state) (yy_start = (state))
+
+__HEADER_PLACEHOLDER__
+
+__TABLES_PLACEHOLDER__
 
 /* --- Internal helpers --- */
 
