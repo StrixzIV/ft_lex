@@ -1,7 +1,6 @@
 // Template for lex.yy.c generation. Placeholders start and end with __
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 /* --- Shared variables --- */
@@ -40,6 +39,9 @@ extern int unput(int c);
 extern int yymore(void);
 
 #define BEGIN(state) (yy_start = (state))
+#ifndef ECHO
+#define ECHO fprintf(yyout, "%s", yytext)
+#endif
 
 __HEADER_PLACEHOLDER__
 
@@ -47,19 +49,20 @@ __TABLES_PLACEHOLDER__
 
 /* --- Internal helpers --- */
 
-void yy_buf_ensure(int needed) {
+int yy_buf_ensure(int needed) {
     if (yy_buf_cap >= needed)
-        return;
+        return 0;
     int new_cap = (yy_buf_cap == 0) ? 256 : yy_buf_cap;
     while (new_cap < needed)
         new_cap *= 2;
     char *tmp = (char *)realloc(yy_buffer, new_cap);
     if (!tmp) {
         fprintf(stderr, "ft_lex: out of memory\n");
-        exit(1);
+        return -1;
     }
     yy_buffer = tmp;
     yy_buf_cap = new_cap;
+    return 0;
 }
 
 /* Called by libl/unput.c */
@@ -102,7 +105,7 @@ int yylex(void) {
             yy_more_flag = 0;
         }
 
-        yy_buf_ensure(buf_idx + 256);
+        if (yy_buf_ensure(buf_idx + 256) < 0) return -1;
 
         /* Read first char */
         c = fgetc(yyin);
@@ -141,7 +144,7 @@ __EOF_ACTION_PLACEHOLDER__
         }
 
         /* Push first char to buffer */
-        yy_buf_ensure(buf_idx + 2);
+        if (yy_buf_ensure(buf_idx + 2) < 0) return -1;
         yy_buffer[buf_idx++] = (char)c;
         yy_buffer[buf_idx] = '\0';
 
@@ -182,7 +185,7 @@ __EOF_ACTION_PLACEHOLDER__
                 }
             }
 
-            yy_buf_ensure(buf_idx + 2);
+            if (yy_buf_ensure(buf_idx + 2) < 0) return -1;
             yy_buffer[buf_idx++] = (char)c;
             yy_buffer[buf_idx] = '\0';
 
