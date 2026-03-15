@@ -1,0 +1,11 @@
+Enter text (Press Ctrl+D to end input):
+number
+word
+number
+word
+line
+
+--- Results ---
+Lines: 1
+Words: 2
+Numbers: 2

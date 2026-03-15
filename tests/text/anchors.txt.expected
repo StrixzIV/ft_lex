@@ -1,0 +1,12 @@
+START[test]
+WORD[start]
+NEWLINE
+WORD[this]
+WORD[is]
+WORD[the]
+END[end]
+NEWLINE
+BOTH[both]
+NEWLINE
+WORD[justaword]
+NEWLINE

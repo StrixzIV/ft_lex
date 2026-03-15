@@ -6,7 +6,7 @@
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/11 02:12:53 by jikaewsi          #+#    #+#             */
-/*   Updated: 2025/12/11 02:12:53 by jikaewsi         ###   ########.fr       */
+/*   Updated: 2026/03/15 18:36:57 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -183,6 +183,18 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
                     i++;
                     if (i >= regex.size())
                         throw std::runtime_error("Trailing backslash in class");
+                } else if (regex[i] == '[' && i + 1 < regex.size() && (regex[i+1] == ':' || regex[i+1] == '.' || regex[i+1] == '=')) {
+                    
+                    char type = regex[i+1];
+                    
+                    i += 2;
+                    
+                    while (i + 1 < regex.size() && !(regex[i] == type && regex[i+1] == ']')) {
+                        i++;
+                    }
+                    
+                    if (i + 1 < regex.size()) i++;
+
                 }
                 first = false;
                 i++;

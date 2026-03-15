@@ -49,11 +49,38 @@ run_test() {
 
     # 3. Run and check
     if [ -f "$txt_file" ]; then
-        ./"$OUT_BIN" < "$txt_file" > /dev/null 2>&1
+        local expected="$txt_file.expected"
+        local actual="$txt_file.actual"
+        local diff_out="$txt_file.diff"
+
+        # Dynamically generate expected output using system flex for C targets
+        if [ ! -f "$expected" ]; then
+            flex -o expected.c "$l_file" > /dev/null 2>&1
+            clang -w expected.c -ll -o expected_bin > /dev/null 2>&1
+            if [ $? -eq 0 ]; then
+                ./expected_bin < "$txt_file" > "$expected" 2>/dev/null
+            fi
+            rm expected.c expected_bin 2>/dev/null
+        fi
+
+        ./"$OUT_BIN" < "$txt_file" > "$actual" 2>&1
         if [ $? -eq 0 ]; then
-            echo -e "${GREEN}PASSED${NC}"
+            if [ -f "$expected" ]; then
+                diff -u "$expected" "$actual" > "$diff_out"
+                if [ $? -eq 0 ]; then
+                    echo -e "${GREEN}PASSED (Output Matches)${NC}"
+                    rm "$actual" "$diff_out" 2>/dev/null
+                else
+                    echo -e "${RED}FAILED (Output Mismatch)${NC}"
+                    # Print the first 10 lines of the diff to avoid flooding the terminal
+                    head -n 15 "$diff_out"
+                fi
+            else
+                echo -e "${YELLOW}PASSED (Runtime OK, No expected output)${NC}"
+                rm "$actual" 2>/dev/null
+            fi
         else
-            echo -e "${RED}FAILED (Runtime)${NC}"
+            echo -e "${RED}FAILED (Runtime Crash)${NC}"
         fi
     else
         ./"$OUT_BIN" < /dev/null > /dev/null 2>&1
@@ -89,11 +116,37 @@ run_multi_test() {
 
     # 3. Run and check
     if [ -f "$txt_file" ]; then
-        ./"$OUT_BIN" < "$txt_file" > /dev/null 2>&1
+        local expected="$txt_file.expected"
+        local actual="$txt_file.actual"
+        local diff_out="$txt_file.diff"
+
+        # Dynamically generate expected output using system flex for C targets
+        if [ ! -f "$expected" ]; then
+            flex -o expected.c "$@" > /dev/null 2>&1
+            clang -w expected.c -ll -o expected_bin > /dev/null 2>&1
+            if [ $? -eq 0 ]; then
+                ./expected_bin < "$txt_file" > "$expected" 2>/dev/null
+            fi
+            rm expected.c expected_bin 2>/dev/null
+        fi
+
+        ./"$OUT_BIN" < "$txt_file" > "$actual" 2>&1
         if [ $? -eq 0 ]; then
-            echo -e "${GREEN}PASSED${NC}"
+            if [ -f "$expected" ]; then
+                diff -u "$expected" "$actual" > "$diff_out"
+                if [ $? -eq 0 ]; then
+                    echo -e "${GREEN}PASSED (Output Matches)${NC}"
+                    rm "$actual" "$diff_out" 2>/dev/null
+                else
+                    echo -e "${RED}FAILED (Output Mismatch)${NC}"
+                    head -n 15 "$diff_out"
+                fi
+            else
+                echo -e "${YELLOW}PASSED (Runtime OK, No expected output)${NC}"
+                rm "$actual" 2>/dev/null
+            fi
         else
-            echo -e "${RED}FAILED (Runtime)${NC}"
+            echo -e "${RED}FAILED (Runtime Crash)${NC}"
         fi
     else
         ./"$OUT_BIN" < /dev/null > /dev/null 2>&1
@@ -138,11 +191,27 @@ run_python_test() {
 
     # 2. Run Python lexer
     if [ -f "$txt_file" ]; then
-        python3 "$GEN_PY" "$txt_file" > /dev/null 2>&1
+        local expected="$txt_file.expected"
+        local actual="$txt_file.actual"
+        local diff_out="$txt_file.diff"
+
+        python3 "$GEN_PY" "$txt_file" > "$actual" 2>&1
         if [ $? -eq 0 ]; then
-            echo -e "${GREEN}PASSED${NC}"
+            if [ -f "$expected" ]; then
+                diff -u "$expected" "$actual" > "$diff_out"
+                if [ $? -eq 0 ]; then
+                    echo -e "${GREEN}PASSED (Output Matches)${NC}"
+                    rm "$actual" "$diff_out" 2>/dev/null
+                else
+                    echo -e "${RED}FAILED (Output Mismatch)${NC}"
+                    head -n 15 "$diff_out"
+                fi
+            else
+                echo -e "${YELLOW}PASSED (Runtime OK, No expected output)${NC}"
+                rm "$actual" 2>/dev/null
+            fi
         else
-            echo -e "${RED}FAILED (Runtime)${NC}"
+            echo -e "${RED}FAILED (Runtime Crash)${NC}"
         fi
     else
         python3 "$GEN_PY" < /dev/null > /dev/null 2>&1
