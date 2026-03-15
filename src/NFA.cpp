@@ -6,7 +6,7 @@
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/11 02:21:56 by jikaewsi          #+#    #+#             */
-/*   Updated: 2025/12/11 02:21:56 by jikaewsi         ###   ########.fr       */
+/*   Updated: 2026/03/16 01:06:23 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -205,31 +205,47 @@ NFA NFA::makeTrailingContext(NFA r1, NFA r2, int &stateCounter) {
     return NFA(r1.start, r2.accept);
 }
 
-static std::shared_ptr<State>
-_copyState(std::shared_ptr<State> s,
-           std::map<int, std::shared_ptr<State>> &clones, int &stateCounter) {
-    if (clones.count(s->id))
-        return clones[s->id];
-    auto clone = std::make_shared<State>(stateCounter++);
-    clone->isAccepting = s->isAccepting;
-    clone->priority = s->priority;
-    clone->action = s->action;
-    clone->trailingContextBoundary = s->trailingContextBoundary;
-    clones[s->id] = clone;
-
-    for (auto const &[c, next] : s->transitions) {
-        clone->transitions[c] = _copyState(next, clones, stateCounter);
-    }
-    for (auto const &next : s->epsilonTransitions) {
-        clone->epsilonTransitions.push_back(
-            _copyState(next, clones, stateCounter));
-    }
-    return clone;
-}
-
 NFA NFA::copy(int &stateCounter) const {
     std::map<int, std::shared_ptr<State>> clones;
-    auto newStart = _copyState(start, clones, stateCounter);
+    std::vector<std::shared_ptr<State>> worklist;
+
+    worklist.push_back(start);
+    clones[start->id] = std::make_shared<State>(stateCounter++);
+
+    size_t head = 0;
+    while (head < worklist.size()) {
+        auto curr = worklist[head++];
+        auto clone = clones[curr->id];
+        clone->isAccepting = curr->isAccepting;
+        clone->priority = curr->priority;
+        clone->action = curr->action;
+        clone->trailingContextBoundary = curr->trailingContextBoundary;
+
+        for (auto const &[c, next] : curr->transitions) {
+            if (clones.find(next->id) == clones.end()) {
+                clones[next->id] = std::make_shared<State>(stateCounter++);
+                worklist.push_back(next);
+            }
+        }
+        for (auto const &next : curr->epsilonTransitions) {
+            if (clones.find(next->id) == clones.end()) {
+                clones[next->id] = std::make_shared<State>(stateCounter++);
+                worklist.push_back(next);
+            }
+        }
+    }
+
+    for (auto const &curr : worklist) {
+        auto clone = clones[curr->id];
+        for (auto const &[c, next] : curr->transitions) {
+            clone->transitions[c] = clones[next->id];
+        }
+        for (auto const &next : curr->epsilonTransitions) {
+            clone->epsilonTransitions.push_back(clones[next->id]);
+        }
+    }
+
+    auto newStart = clones[start->id];
     auto newAccept = clones[accept->id];
     return NFA(newStart, newAccept);
 }

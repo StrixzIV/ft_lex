@@ -278,9 +278,14 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     size_compressed=$(wc -c < "lex.yy.c.compressed")
 
     if [ "$size_compressed" -gt 0 ] && [ "$size_uncompressed" -gt $(($size_compressed * 2)) ]; then
-        echo -e "${GREEN}PASSED ($size_uncompressed bytes -> $size_compressed bytes)${NC}"
+        compaction=$(awk "BEGIN {printf \"%.4fx\", $size_uncompressed / $size_compressed}")
+        echo -e "${GREEN}PASSED ($size_uncompressed bytes -> $size_compressed bytes, Compaction: $compaction)${NC}"
     else
-        echo -e "${RED}FAILED ($size_uncompressed bytes -> $size_compressed bytes, not >2x reduction)${NC}"
+        compaction="N/A"
+        if [ "$size_compressed" -gt 0 ]; then
+            compaction=$(awk "BEGIN {printf \"%.4fx\", $size_uncompressed / $size_compressed}")
+        fi
+        echo -e "${RED}FAILED ($size_uncompressed bytes -> $size_compressed bytes, Compaction: $compaction, not >2x reduction)${NC}"
     fi
     rm "lex.yy.c.uncompressed" "lex.yy.c.compressed" 2>/dev/null
 
