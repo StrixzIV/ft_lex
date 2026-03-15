@@ -10,54 +10,55 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../include/utils.hpp"
-#include "../include/template.hpp"
 #include "../include/AGenerator.hpp"
 #include "../include/CGenerator.hpp"
+#include "../include/DFA.hpp"
+#include "../include/LexerParser.hpp"
 #include "../include/PythonGenerator.hpp"
+#include "../include/template.hpp"
+#include "../include/utils.hpp"
 
 #include <string_view>
 
-std::string AGenerator::loadTemplate(const std::string& template_key) {
+std::string AGenerator::loadTemplate(const std::string &template_key) {
 
     std::size_t size = 0;
-    const unsigned char* start = nullptr;
+    const unsigned char *start = nullptr;
 
     if (template_key == "C") {
         size = TEMPLATE_C_SIZE;
         start = TEMPLATE_C_START;
     }
-    
+
     else if (template_key == "Python") {
         size = TEMPLATE_PY_SIZE;
         start = TEMPLATE_PY_START;
     }
-    
+
     else {
-        throw std::runtime_error("Unknown template key provided to AGenerator::loadTemplate");
+        throw std::runtime_error(
+            "Unknown template key provided to AGenerator::loadTemplate");
     }
 
     if (!start || size == 0) {
-        throw std::runtime_error("Template data is missing or empty for key: " + template_key);
+        throw std::runtime_error("Template data is missing or empty for key: " +
+                                 template_key);
     }
 
-    std::string_view template_view(
-        reinterpret_cast<const char*>(start),
-        size
-    );
-    
-    return std::string(template_view);
+    std::string_view template_view(reinterpret_cast<const char *>(start), size);
 
+    return std::string(template_view);
 }
 
-void AGenerator::generate(const std::vector<DFA> &dfas, const LexerParser &parser, std::ostream &out) {
+void AGenerator::generate(const std::vector<DFA> &dfas,
+                          const LexerParser &parser, std::ostream &out) {
 
     std::string template_key = "Unknown";
 
     if (typeid(*this) == typeid(CGenerator)) {
         template_key = "C";
     }
-    
+
     else if (typeid(*this) == typeid(PythonGenerator)) {
         template_key = "Python";
     }
@@ -77,5 +78,4 @@ void AGenerator::generate(const std::vector<DFA> &dfas, const LexerParser &parse
     replace_placeholder(output_code, "__USER_CODE_PLACEHOLDER__", user_code);
 
     out << output_code;
-
 }

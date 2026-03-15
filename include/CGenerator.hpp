@@ -13,25 +13,25 @@
 #ifndef CGENERATOR_HPP
 #define CGENERATOR_HPP
 
-# include "AGenerator.hpp"
+#include "AGenerator.hpp"
 
-# include <string>
+#include <string>
 
-class CGenerator: public AGenerator {
+class CGenerator : public AGenerator {
 
-    public:
-        CGenerator() = default;
+  public:
+    CGenerator() = default;
 
-    protected:
-        std::string generateHeader(const LexerParser &parser) override;
-        std::string generateTables(const std::vector<DFA> &dfas, const LexerParser &parser) override;
-        std::string generateLexerBody(const LexerParser &parser) override;
-        std::string generateEofActions(const LexerParser &parser) override;
-        std::string generateUserCode(const LexerParser &parser) override;
+  protected:
+    std::string generateHeader(const LexerParser &parser) override;
+    std::string generateTables(const std::vector<DFA> &dfas,
+                               const LexerParser &parser) override;
+    std::string generateLexerBody(const LexerParser &parser) override;
+    std::string generateEofActions(const LexerParser &parser) override;
+    std::string generateUserCode(const LexerParser &parser) override;
 
-    private:
-        std::string _generateRulesSwitch(const LexerParser &parser); 
-
+  private:
+    std::string _generateRulesSwitch(const LexerParser &parser);
 };
 
 #endif

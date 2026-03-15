@@ -13,22 +13,22 @@
 #ifndef PYTHONGNERATOR_HPP
 #define PYTHONGNERATOR_HPP
 
-# include "AGenerator.hpp"
+#include "AGenerator.hpp"
 
-# include <string>
+#include <string>
 
-class PythonGenerator: public AGenerator {
+class PythonGenerator : public AGenerator {
 
-    public:
-        PythonGenerator() = default;
-    
-    protected:
-        std::string generateHeader(const LexerParser &parser) override;
-        std::string generateTables(const std::vector<DFA> &dfas, const LexerParser &parser) override;
-        std::string generateLexerBody(const LexerParser &parser) override;
-        std::string generateEofActions(const LexerParser &parser) override;
-        std::string generateUserCode(const LexerParser &parser) override;
+  public:
+    PythonGenerator() = default;
 
+  protected:
+    std::string generateHeader(const LexerParser &parser) override;
+    std::string generateTables(const std::vector<DFA> &dfas,
+                               const LexerParser &parser) override;
+    std::string generateLexerBody(const LexerParser &parser) override;
+    std::string generateEofActions(const LexerParser &parser) override;
+    std::string generateUserCode(const LexerParser &parser) override;
 };
 
 #endif

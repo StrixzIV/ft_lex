@@ -13,39 +13,43 @@
 #ifndef DFA_HPP
 #define DFA_HPP
 
-#include "NFA.hpp"
-#include <vector>
+struct State;
+class NFA;
 #include <map>
-#include <set>
 #include <memory>
+#include <set>
 #include <string>
+#include <vector>
 
 struct DFAState {
     int id;
-    std::set<int> nfaStates; // IDs of NFA states
-    
+    std::set<int> nfaStates;
+
     bool isAccepting;
-    int priority; // Winning priority
+    int priority;
     std::string action;
-    bool trailingContextBoundary; // is end-of-r1 in a trailing context rule?
+    bool trailingContextBoundary;
 
     std::map<int, std::shared_ptr<DFAState>> transitions;
 
-    DFAState(int id) : id(id), isAccepting(false), priority(-1), trailingContextBoundary(false) {}
+    DFAState(int id)
+        : id(id), isAccepting(false), priority(-1),
+          trailingContextBoundary(false) {}
 };
 
 class DFA {
 
-    public:
-        std::shared_ptr<DFAState> start;
-        std::vector<std::shared_ptr<DFAState>> states;
+  public:
+    std::shared_ptr<DFAState> start;
+    std::vector<std::shared_ptr<DFAState>> states;
 
-        static DFA fromNFA(const NFA &nfa, int &dfaStateCounter);
+    static DFA fromNFA(const NFA &nfa, int &dfaStateCounter);
 
-    private:
-        static std::set<std::shared_ptr<State>> _epsilonClosure(const std::set<std::shared_ptr<State>> &states);
-        static std::set<std::shared_ptr<State>> _move(const std::set<std::shared_ptr<State>> &states, int c);
-
+  private:
+    static std::set<std::shared_ptr<State>>
+    _epsilonClosure(const std::set<std::shared_ptr<State>> &states);
+    static std::set<std::shared_ptr<State>>
+    _move(const std::set<std::shared_ptr<State>> &states, int c);
 };
 
 #endif

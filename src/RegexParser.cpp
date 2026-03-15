@@ -23,12 +23,13 @@ std::vector<Token> RegexParser::toPostfix(const std::string &regex) {
     std::stack<Token> operators;
 
     for (const auto &token : explicitConcat) {
-        if (token.type == CHAR || token.type == CHARSET || token.type == ANCHOR_START || token.type == ANCHOR_END) {
+        if (token.type == CHAR || token.type == CHARSET ||
+            token.type == ANCHOR_START || token.type == ANCHOR_END) {
             postfix.push_back(token);
         } else if (token.type == INTERVAL) {
             postfix.push_back(token);
         } else if (token.type == TRAILING_CONTEXT_OP) {
-            // Treat as a binary operator: flush all higher-prec ops then push
+
             while (!operators.empty() && operators.top().c != '(' &&
                    _getPrecedence(operators.top()) >= _getPrecedence(token)) {
                 postfix.push_back(operators.top());
@@ -44,11 +45,12 @@ std::vector<Token> RegexParser::toPostfix(const std::string &regex) {
                     operators.pop();
                 }
                 if (!operators.empty()) {
-                    operators.pop(); // Pop '('
+                    operators.pop();
                 }
             } else {
-                while (!operators.empty() && operators.top().c != '(' && 
-                       _getPrecedence(operators.top()) >= _getPrecedence(token)) {
+                while (!operators.empty() && operators.top().c != '(' &&
+                       _getPrecedence(operators.top()) >=
+                           _getPrecedence(token)) {
                     postfix.push_back(operators.top());
                     operators.pop();
                 }
@@ -68,53 +70,71 @@ std::vector<Token> RegexParser::toPostfix(const std::string &regex) {
 static std::set<int> _getPOSIXClass(const std::string &name) {
     std::set<int> s;
     if (name == "alpha") {
-        for (int c = 'a'; c <= 'z'; ++c) s.insert(c);
-        for (int c = 'A'; c <= 'Z'; ++c) s.insert(c);
+        for (int c = 'a'; c <= 'z'; ++c)
+            s.insert(c);
+        for (int c = 'A'; c <= 'Z'; ++c)
+            s.insert(c);
     } else if (name == "upper") {
-        for (int c = 'A'; c <= 'Z'; ++c) s.insert(c);
+        for (int c = 'A'; c <= 'Z'; ++c)
+            s.insert(c);
     } else if (name == "lower") {
-        for (int c = 'a'; c <= 'z'; ++c) s.insert(c);
+        for (int c = 'a'; c <= 'z'; ++c)
+            s.insert(c);
     } else if (name == "digit") {
-        for (int c = '0'; c <= '9'; ++c) s.insert(c);
+        for (int c = '0'; c <= '9'; ++c)
+            s.insert(c);
     } else if (name == "alnum") {
-        for (int c = 'a'; c <= 'z'; ++c) s.insert(c);
-        for (int c = 'A'; c <= 'Z'; ++c) s.insert(c);
-        for (int c = '0'; c <= '9'; ++c) s.insert(c);
+        for (int c = 'a'; c <= 'z'; ++c)
+            s.insert(c);
+        for (int c = 'A'; c <= 'Z'; ++c)
+            s.insert(c);
+        for (int c = '0'; c <= '9'; ++c)
+            s.insert(c);
     } else if (name == "space") {
-        s.insert(' '); s.insert('\t'); s.insert('\n'); s.insert('\r'); s.insert('\f'); s.insert('\v');
+        s.insert(' ');
+        s.insert('\t');
+        s.insert('\n');
+        s.insert('\r');
+        s.insert('\f');
+        s.insert('\v');
     } else if (name == "print") {
-        for (int c = 32; c <= 126; ++c) s.insert(c);
+        for (int c = 32; c <= 126; ++c)
+            s.insert(c);
     } else if (name == "graph") {
-        for (int c = 33; c <= 126; ++c) s.insert(c);
+        for (int c = 33; c <= 126; ++c)
+            s.insert(c);
     } else if (name == "cntrl") {
-        for (int c = 0; c <= 31; ++c) s.insert(c);
+        for (int c = 0; c <= 31; ++c)
+            s.insert(c);
         s.insert(127);
     } else if (name == "xdigit") {
-        for (int c = '0'; c <= '9'; ++c) s.insert(c);
-        for (int c = 'a'; c <= 'f'; ++c) s.insert(c);
-        for (int c = 'A'; c <= 'F'; ++c) s.insert(c);
+        for (int c = '0'; c <= '9'; ++c)
+            s.insert(c);
+        for (int c = 'a'; c <= 'f'; ++c)
+            s.insert(c);
+        for (int c = 'A'; c <= 'F'; ++c)
+            s.insert(c);
     } else if (name == "blank") {
-        s.insert(' '); s.insert('\t');
+        s.insert(' ');
+        s.insert('\t');
     }
     return s;
 }
 
 std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
     std::vector<Token> tokens;
-    
-    // Explicit Trailing Context `/` tokenization logic (future-proofing)
+
     size_t len = regex.size();
-    
+
     for (size_t i = 0; i < len; ++i) {
         char c = regex[i];
 
-        // Line Anchors
         if (i == 0 && c == '^') {
             tokens.push_back(Token('^', ANCHOR_START));
             continue;
         }
         if (i == len - 1 && c == '$') {
-            // Check if it's escaped
+
             int bsCount = 0;
             for (int k = (int)i - 1; k >= 0 && regex[k] == '\\'; --k) {
                 bsCount++;
@@ -129,19 +149,24 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
             if (i + 1 < regex.size()) {
                 char next = regex[++i];
                 char escaped = next;
-                
-                if (next == 'n') escaped = '\n';
-                else if (next == 't') escaped = '\t';
-                else if (next == 'r') escaped = '\r';
-                else if (next == 'v') escaped = '\v';
-                else if (next == 'f') escaped = '\f';
-                
+
+                if (next == 'n')
+                    escaped = '\n';
+                else if (next == 't')
+                    escaped = '\t';
+                else if (next == 'r')
+                    escaped = '\r';
+                else if (next == 'v')
+                    escaped = '\v';
+                else if (next == 'f')
+                    escaped = '\f';
+
                 tokens.push_back(Token(escaped, CHAR));
             } else {
                 throw std::runtime_error("Trailing backslash in regex");
             }
         } else if (c == '[') {
-            // Parse character set
+
             std::set<int> set;
             i++;
             bool negated = false;
@@ -152,25 +177,28 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
 
             bool first = true;
             size_t start = i;
-            
+
             while (i < regex.size() && (regex[i] != ']' || first)) {
                 if (regex[i] == '\\') {
-                     i++; 
-                     if (i >= regex.size()) throw std::runtime_error("Trailing backslash in class");
+                    i++;
+                    if (i >= regex.size())
+                        throw std::runtime_error("Trailing backslash in class");
                 }
                 first = false;
                 i++;
             }
-            if (i == regex.size()) throw std::runtime_error("Unmatched [");
-            
+            if (i == regex.size())
+                throw std::runtime_error("Unmatched [");
+
             std::string rawContent = regex.substr(start, i - start);
-            
+
             for (size_t j = 0; j < rawContent.size(); ++j) {
-                // Check for POSIX class [:name:]
+
                 if (rawContent.substr(j, 2) == "[:") {
                     size_t end = rawContent.find(":]", j + 2);
                     if (end != std::string::npos) {
-                        std::string name = rawContent.substr(j + 2, end - (j + 2));
+                        std::string name =
+                            rawContent.substr(j + 2, end - (j + 2));
                         std::set<int> cls = _getPOSIXClass(name);
                         set.insert(cls.begin(), cls.end());
                         j = end + 1;
@@ -181,31 +209,46 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
                 char current;
                 if (rawContent[j] == '\\' && j + 1 < rawContent.size()) {
                     char next = rawContent[++j];
-                    if (next == 'n') current = '\n';
-                    else if (next == 't') current = '\t';
-                    else if (next == 'r') current = '\r';
-                    else if (next == 'v') current = '\v';
-                    else if (next == 'f') current = '\f';
-                    else current = next;
+                    if (next == 'n')
+                        current = '\n';
+                    else if (next == 't')
+                        current = '\t';
+                    else if (next == 'r')
+                        current = '\r';
+                    else if (next == 'v')
+                        current = '\v';
+                    else if (next == 'f')
+                        current = '\f';
+                    else
+                        current = next;
                 } else {
                     current = rawContent[j];
                 }
-                
-                if (j + 2 < rawContent.size() && rawContent[j+1] == '-') {
+
+                if (j + 2 < rawContent.size() && rawContent[j + 1] == '-') {
                     size_t nextIdx = j + 2;
                     char rangeEnd;
-                    if (rawContent[nextIdx] == '\\' && nextIdx + 1 < rawContent.size()) {
+                    if (rawContent[nextIdx] == '\\' &&
+                        nextIdx + 1 < rawContent.size()) {
                         char next = rawContent[++nextIdx];
-                        if (next == 'n') rangeEnd = '\n';
-                        else if (next == 't') rangeEnd = '\t';
-                        else if (next == 'r') rangeEnd = '\r';
-                        else if (next == 'v') rangeEnd = '\v';
-                        else if (next == 'f') rangeEnd = '\f';
-                        else rangeEnd = next;
+                        if (next == 'n')
+                            rangeEnd = '\n';
+                        else if (next == 't')
+                            rangeEnd = '\t';
+                        else if (next == 'r')
+                            rangeEnd = '\r';
+                        else if (next == 'v')
+                            rangeEnd = '\v';
+                        else if (next == 'f')
+                            rangeEnd = '\f';
+                        else
+                            rangeEnd = next;
                     } else {
                         rangeEnd = rawContent[nextIdx];
                     }
-                    for (int rc = (unsigned char)current; rc <= (unsigned char)rangeEnd; ++rc) set.insert(rc);
+                    for (int rc = (unsigned char)current;
+                         rc <= (unsigned char)rangeEnd; ++rc)
+                        set.insert(rc);
                     j = nextIdx;
                 } else {
                     set.insert((unsigned char)current);
@@ -215,14 +258,15 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
             if (negated) {
                 std::set<int> inverted;
                 for (int k = -128; k <= 127; ++k) {
-                    if (set.find((unsigned char)k) == set.end()) inverted.insert((unsigned char)k);
+                    if (set.find((unsigned char)k) == set.end())
+                        inverted.insert((unsigned char)k);
                 }
                 tokens.push_back(Token(inverted));
             } else {
                 tokens.push_back(Token(set));
             }
         } else if (c == '{') {
-            // Interval expression {n,m} or {n,} or {n}
+
             size_t close = regex.find('}', i);
             if (close != std::string::npos && !tokens.empty()) {
                 std::string content = regex.substr(i + 1, close - i - 1);
@@ -231,60 +275,70 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
                 size_t comma = content.find(',');
                 try {
                     if (comma == std::string::npos) {
-                        n = std::stoi(content); m = n;
+                        n = std::stoi(content);
+                        m = n;
                     } else {
                         n = std::stoi(content.substr(0, comma));
-                        if (comma + 1 < content.size()) m = std::stoi(content.substr(comma + 1));
-                        else m = 999; // Represents infinity
+                        if (comma + 1 < content.size())
+                            m = std::stoi(content.substr(comma + 1));
+                        else
+                            m = 999;
                     }
-                } catch (...) { valid = false; }
+                } catch (...) {
+                    valid = false;
+                }
 
                 if (valid && n >= 0) {
-                    // We expand {n,m} by duplicating the last "atom"
-                    // This is complex if the last atom was a group (a|b).
-                    // For now, let's treat { as a special operator that the postfix engine handles.
-                    // But easier: add it as a Token(n, m, INTERVAL)
-                    tokens.push_back(Token(n, m)); // I need to update Token class
+
+                    tokens.push_back(Token(n, m));
                     i = close;
                     continue;
                 }
             }
             tokens.push_back(Token('{', CHAR));
         } else if (c == '"') {
-            // Quoted string: treat every char inside literally (except backslash escapes)
+
             i++;
             while (i < regex.size() && regex[i] != '"') {
                 if (regex[i] == '\\') {
                     i++;
-                    if (i >= regex.size()) throw std::runtime_error("Trailing backslash in quote");
+                    if (i >= regex.size())
+                        throw std::runtime_error("Trailing backslash in quote");
                     char next = regex[i];
                     char escaped = next;
-                    if (next == 'n') escaped = '\n';
-                    else if (next == 't') escaped = '\t';
-                    else if (next == 'r') escaped = '\r';
-                    else if (next == 'v') escaped = '\v';
-                    else if (next == 'f') escaped = '\f';
+                    if (next == 'n')
+                        escaped = '\n';
+                    else if (next == 't')
+                        escaped = '\t';
+                    else if (next == 'r')
+                        escaped = '\r';
+                    else if (next == 'v')
+                        escaped = '\v';
+                    else if (next == 'f')
+                        escaped = '\f';
                     tokens.push_back(Token(escaped, CHAR));
                 } else {
                     tokens.push_back(Token(regex[i], CHAR));
                 }
                 i++;
             }
-            if (i == regex.size()) throw std::runtime_error("Unmatched \"");
-        } else if (c == '(' || c == ')' || c == '*' || c == '+' || c == '?' || c == '|') {
+            if (i == regex.size())
+                throw std::runtime_error("Unmatched \"");
+        } else if (c == '(' || c == ')' || c == '*' || c == '+' || c == '?' ||
+                   c == '|') {
             tokens.push_back(Token(c, OPERATOR));
         } else if (c == '/') {
-            // Trailing context operator: r1/r2 = match r1 only when followed by r2
+
             tokens.push_back(Token('/', TRAILING_CONTEXT_OP));
         } else if (c == '.') {
-             // Dot is a special charset (all except \n)
-             std::set<int> dotSet;
-             for (int k = -128; k <= 127; ++k) {
-                 if ((char)k != '\n') {
-                     dotSet.insert((char)k);
-                 }
-             }
-             tokens.push_back(Token(dotSet));
+
+            std::set<int> dotSet;
+            for (int k = -128; k <= 127; ++k) {
+                if ((char)k != '\n') {
+                    dotSet.insert((char)k);
+                }
+            }
+            tokens.push_back(Token(dotSet));
         } else {
             tokens.push_back(Token(c, CHAR));
         }
@@ -292,19 +346,26 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
     return tokens;
 }
 
-std::vector<Token> RegexParser::_addExplicitConcat(const std::vector<Token> &tokens) {
+std::vector<Token>
+RegexParser::_addExplicitConcat(const std::vector<Token> &tokens) {
     std::vector<Token> result;
     for (size_t i = 0; i < tokens.size(); ++i) {
         result.push_back(tokens[i]);
 
         if (i + 1 < tokens.size()) {
             const Token &curr = tokens[i];
-            const Token &next = tokens[i+1];
-            
-            bool currIsOperand = (curr.type == CHAR || curr.type == CHARSET || curr.type == ANCHOR_START || curr.type == ANCHOR_END || (curr.type == OPERATOR && (curr.c == ')' || curr.c == '*' || curr.c == '+' || curr.c == '?')));
-            // For next: ANCHOR_START and TRAILING_CONTEXT_OP following an operand also need concat
-            bool nextIsOperand = (next.type == CHAR || next.type == CHARSET || next.type == ANCHOR_END || (next.type == OPERATOR && next.c == '('));
-            // ANCHOR_START at the start of a group needs concat too
+            const Token &next = tokens[i + 1];
+
+            bool currIsOperand =
+                (curr.type == CHAR || curr.type == CHARSET ||
+                 curr.type == ANCHOR_START || curr.type == ANCHOR_END ||
+                 (curr.type == OPERATOR && (curr.c == ')' || curr.c == '*' ||
+                                            curr.c == '+' || curr.c == '?')));
+
+            bool nextIsOperand = (next.type == CHAR || next.type == CHARSET ||
+                                  next.type == ANCHOR_END ||
+                                  (next.type == OPERATOR && next.c == '('));
+
             bool nextIsAnchorStart = (next.type == ANCHOR_START);
 
             if (currIsOperand && (nextIsOperand || nextIsAnchorStart)) {
@@ -317,7 +378,7 @@ std::vector<Token> RegexParser::_addExplicitConcat(const std::vector<Token> &tok
 
 int RegexParser::_getPrecedence(const Token &t) {
     if (t.type == TRAILING_CONTEXT_OP)
-        return 0; // Lowest — separates r1 and r2 below alternation
+        return 0;
     if (t.type == INTERVAL) {
         return 3;
     }

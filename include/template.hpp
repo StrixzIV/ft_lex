@@ -15,10 +15,10 @@
 
 #include <cstddef>
 
-extern const std::size_t    TEMPLATE_C_SIZE;
-extern const unsigned char  TEMPLATE_C_START[];
+extern const std::size_t TEMPLATE_C_SIZE;
+extern const unsigned char TEMPLATE_C_START[];
 
-extern const std::size_t    TEMPLATE_PY_SIZE;
-extern const unsigned char  TEMPLATE_PY_START[];
+extern const std::size_t TEMPLATE_PY_SIZE;
+extern const unsigned char TEMPLATE_PY_START[];
 
 #endif

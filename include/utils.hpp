@@ -13,9 +13,11 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
-# include <string>
-# include <string_view>
+#include <string>
+#include <string_view>
 
-std::string replace_placeholder(std::string &source, const std::string_view &placeholder, const std::string &replacement);
+std::string replace_placeholder(std::string &source,
+                                const std::string_view &placeholder,
+                                const std::string &replacement);
 
 #endif

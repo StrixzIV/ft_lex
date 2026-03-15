@@ -13,32 +13,31 @@
 #ifndef AGENERATOR_HPP
 #define AGENERATOR_HPP
 
-# include "DFA.hpp"
-# include "LexerParser.hpp"
+#include <iosfwd>
+#include <string>
+#include <vector>
 
-# include <string>
-# include <iostream>
-# include <typeinfo>
-
+class DFA;
+class LexerParser;
 class CGenerator;
 class PythonGenerator;
 
 class AGenerator {
 
-    public:
-        void generate(const std::vector<DFA> &dfas, const LexerParser &parser, std::ostream &out);
-        virtual ~AGenerator() = default;
+  public:
+    void generate(const std::vector<DFA> &dfas, const LexerParser &parser,
+                  std::ostream &out);
+    virtual ~AGenerator() = default;
 
-    protected:
+  protected:
+    virtual std::string generateHeader(const LexerParser &parser) = 0;
+    virtual std::string generateTables(const std::vector<DFA> &dfas,
+                                       const LexerParser &parser) = 0;
+    virtual std::string generateLexerBody(const LexerParser &parser) = 0;
+    virtual std::string generateEofActions(const LexerParser &parser) = 0;
+    virtual std::string generateUserCode(const LexerParser &parser) = 0;
 
-        virtual std::string generateHeader(const LexerParser &parser) = 0;
-        virtual std::string generateTables(const std::vector<DFA> &dfas, const LexerParser &parser) = 0;
-        virtual std::string generateLexerBody(const LexerParser &parser) = 0;
-        virtual std::string generateEofActions(const LexerParser &parser) = 0;
-        virtual std::string generateUserCode(const LexerParser &parser) = 0;
-        
-        std::string loadTemplate(const std::string &template_key);
-
+    std::string loadTemplate(const std::string &template_key);
 };
 
 #endif

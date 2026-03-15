@@ -10,33 +10,35 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <iostream>
 #include <fstream>
-#include <string>
+#include <iostream>
 #include <memory>
-#include <vector>
+#include <string>
 #include <unistd.h>
+#include <vector>
 
+#include "../include/DFA.hpp"
 #include "../include/LexerParser.hpp"
 #include "../include/NFA.hpp"
-#include "../include/DFA.hpp"
 #include "../include/RegexParser.hpp"
 
 #include "../include/AGenerator.hpp"
 #include "../include/CGenerator.hpp"
 #include "../include/PythonGenerator.hpp"
 
-void print_usage(const char* prog) {
-    std::cerr << "Usage: " << prog << " [-vntc] [-o file] [-l lang] <lexer.l>...\n";
+void print_usage(const char *prog) {
+    std::cerr << "Usage: " << prog
+              << " [-vntc] [-o file] [-l lang] <lexer.l>...\n";
     std::cerr << "  -v: Write a summary of scanner statistics to stderr\n";
     std::cerr << "  -n: No-op for POSIX compliance (suppress summary)\n";
     std::cerr << "  -c: No-op for POSIX compliance (C output is default)\n";
     std::cerr << "  -t: Write generated code to stdout\n";
-    std::cerr << "  -o file: Write generated code to 'file' (default: lex.yy.c or lex.yy.py)\n";
+    std::cerr << "  -o file: Write generated code to 'file' (default: lex.yy.c "
+                 "or lex.yy.py)\n";
     std::cerr << "  -l lang: Target language 'c' or 'python' (default: c)\n";
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 
     bool to_stdout = false;
     bool verbose = false;
@@ -48,27 +50,27 @@ int main(int argc, char** argv) {
     int opt;
     while ((opt = getopt(argc, argv, "vntco:l:")) != -1) {
         switch (opt) {
-            case 'v':
-                verbose = true;
-                break;
-            case 'n':
-                suppress_summary = true;
-                break;
-            case 'c':
-                target_lang = "c";
-                break;
-            case 't':
-                to_stdout = true;
-                break;
-            case 'o':
-                output_filename = optarg;
-                break;
-            case 'l':
-                target_lang = optarg;
-                break;
-            default:
-                print_usage(argv[0]);
-                return 1;
+        case 'v':
+            verbose = true;
+            break;
+        case 'n':
+            suppress_summary = true;
+            break;
+        case 'c':
+            target_lang = "c";
+            break;
+        case 't':
+            to_stdout = true;
+            break;
+        case 'o':
+            output_filename = optarg;
+            break;
+        case 'l':
+            target_lang = optarg;
+            break;
+        default:
+            print_usage(argv[0]);
+            return 1;
         }
     }
 
@@ -82,7 +84,8 @@ int main(int argc, char** argv) {
     }
 
     if (target_lang != "c" && target_lang != "python") {
-        std::cerr << "Error: Unsupported target language '" << target_lang << "'. Use 'c' or 'python'.\n";
+        std::cerr << "Error: Unsupported target language '" << target_lang
+                  << "'. Use 'c' or 'python'.\n";
         return 1;
     }
 
@@ -99,13 +102,15 @@ int main(int argc, char** argv) {
         int dfaStateCounter = 0;
         std::vector<DFA> dfas;
 
-        const auto& startConds = parser.getStartConditions();
-        const auto& rules = parser.getRulesList();
+        const auto &startConds = parser.getStartConditions();
+        const auto &rules = parser.getRulesList();
 
         if (!suppress_summary) {
-            std::cout << "ft_lex: Processing " << input_filenames.size() << " files for target '" << target_lang << "'...\n";
-            std::cout << "ft_lex: Parsed " << rules.size() << (rules.size() == 1 ? " rule" : " rules") 
-                      << " across " << startConds.size() << " start conditions.\n";
+            std::cout << "ft_lex: Processing " << input_filenames.size()
+                      << " files for target '" << target_lang << "'...\n";
+            std::cout << "ft_lex: Parsed " << rules.size()
+                      << (rules.size() == 1 ? " rule" : " rules") << " across "
+                      << startConds.size() << " start conditions.\n";
         }
 
         size_t total_dfa_states = 0;
@@ -117,14 +122,14 @@ int main(int argc, char** argv) {
             masterStart->transitions.insert({256, bolStart});
 
             int priority = 0;
-            for (const auto& rule : rules) {
-                
-                // Check if this rule applies to the current start condition
+            for (const auto &rule : rules) {
+
                 bool applies = false;
                 if (rule.startConditions.empty()) {
-                    if (!startConds[c_idx].isExclusive) applies = true;
+                    if (!startConds[c_idx].isExclusive)
+                        applies = true;
                 } else {
-                    for (const auto& sc : rule.startConditions) {
+                    for (const auto &sc : rule.startConditions) {
                         if (sc == "*" || sc == startConds[c_idx].name) {
                             applies = true;
                             break;
@@ -133,42 +138,44 @@ int main(int argc, char** argv) {
                 }
 
                 if (!applies) {
-                    priority++; // essential: keep rule index aligned with priority
+                    priority++;
                     continue;
                 }
 
                 try {
-                    std::vector<Token> postfix = RegexParser::toPostfix(rule.regex);
-                    
-                    // Check if the rule has a BOL anchor at the very beginning
-                    bool hasBOL = (rule.regex.size() > 0 && rule.regex[0] == '^');
+                    std::vector<Token> postfix =
+                        RegexParser::toPostfix(rule.regex);
+
+                    bool hasBOL =
+                        (rule.regex.size() > 0 && rule.regex[0] == '^');
 
                     NFA nfa = NFA::fromRegex(postfix, stateCounter);
-                    // Configure accepting state
+
                     nfa.accept->isAccepting = true;
-                    nfa.accept->priority = priority; 
+                    nfa.accept->priority = priority;
                     nfa.accept->action = rule.action;
-                    
+
                     if (hasBOL) {
                         masterStart->epsilonTransitions.push_back(nfa.start);
                     } else {
                         masterStart->epsilonTransitions.push_back(nfa.start);
                         bolStart->epsilonTransitions.push_back(nfa.start);
                     }
-                } catch (const std::exception& e) {
-                    std::cerr << parser.formatError(rule.lineNo, 1, e.what()) << "\n";
+                } catch (const std::exception &e) {
+                    std::cerr << parser.formatError(rule.lineNo, 1, e.what())
+                              << "\n";
                     return 1;
                 }
 
                 priority++;
             }
-            
+
             auto dummyAccept = std::make_shared<State>(stateCounter++);
             NFA masterNFA(masterStart, dummyAccept);
             DFA dfa = DFA::fromNFA(masterNFA, dfaStateCounter);
-            
+
             total_dfa_states += dfa.states.size();
-            for (const auto& s : dfa.states) {
+            for (const auto &s : dfa.states) {
                 total_dfa_transitions += s->transitions.size();
             }
 
@@ -179,9 +186,10 @@ int main(int argc, char** argv) {
             std::cerr << "DFA Statistics:\n";
             std::cerr << "  Total NFA states: " << stateCounter << "\n";
             std::cerr << "  Total DFA states: " << total_dfa_states << "\n";
-            std::cerr << "  Total transitions: " << total_dfa_transitions << "\n";
+            std::cerr << "  Total transitions: " << total_dfa_transitions
+                      << "\n";
         }
-    
+
         std::unique_ptr<AGenerator> generator;
 
         if (target_lang == "c") {
@@ -189,13 +197,14 @@ int main(int argc, char** argv) {
         } else {
             generator = std::make_unique<PythonGenerator>();
         }
-        
+
         if (to_stdout) {
             generator->generate(dfas, parser, std::cout);
         } else {
             std::ofstream outfile(output_filename);
             if (!outfile) {
-                throw std::runtime_error("Could not open output file: " + output_filename);
+                throw std::runtime_error("Could not open output file: " +
+                                         output_filename);
             }
             generator->generate(dfas, parser, outfile);
             outfile.close();
@@ -203,12 +212,11 @@ int main(int argc, char** argv) {
         }
 
     }
-    
-    catch (const std::exception& e) {
+
+    catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
-    
-    return 0;
 
+    return 0;
 }

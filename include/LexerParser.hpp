@@ -13,20 +13,20 @@
 #ifndef LEXERPARSER_HPP
 #define LEXERPARSER_HPP
 
+#include <map>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
-#include <map>
-#include <stdexcept>
 
 class LexerParser {
 
-public:
+  public:
     struct Rule {
         std::string regex;
         std::string action;
-        std::vector<std::string> startConditions; // Which conditions this rule applies to
-        int lineNo; // Line number where this rule starts
+        std::vector<std::string> startConditions;
+        int lineNo;
     };
 
     struct StartCondition {
@@ -48,8 +48,8 @@ public:
     const std::map<int, std::string> &getEofActions() const;
 
     std::string formatError(int line, int col, const std::string &msg) const;
-    
-private:
+
+  private:
     struct FileBoundary {
         std::string filename;
         int startLine;
@@ -67,16 +67,14 @@ private:
     std::vector<Rule> _rulesList;
     std::map<std::string, std::string> _namedDefinitions;
     std::vector<StartCondition> _startConditions;
-    std::map<int, std::string> _eofActions; // keyed by start condition index
-    int _lineNo; // current line in concatenated stream
-     
+    std::map<int, std::string> _eofActions;
+    int _lineNo;
 
     void _readFile();
     void _splitSections();
     void _parseDefinitions();
     std::string _expandDefinitions(const std::string &regex);
     void _parseRules();
-
 };
 
 #endif

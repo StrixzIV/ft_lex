@@ -16,25 +16,26 @@
 #include <set>
 #include <vector>
 
-enum TokenType { 
-    CHAR, 
-    OPERATOR, 
+enum TokenType {
+    CHAR,
+    OPERATOR,
     CHARSET,
-    ANCHOR_START,          // ^ start of line (pseudo-char 256)
-    ANCHOR_END,            // $ end of line   (pseudo-char 257)
-    TRAILING_CONTEXT_OP,   // / trailing context operator
-    INTERVAL               // {n,m}
+    ANCHOR_START,
+    ANCHOR_END,
+    TRAILING_CONTEXT_OP,
+    INTERVAL
 };
 
 struct Token {
     TokenType type;
-    int c; // Changed to int to allow values > 255 for anchors
-    std::set<int> charSet; 
-    int min; // For INTERVAL
-    int max; // For INTERVAL (-1 for infinity)
-    
+    int c;
+    std::set<int> charSet;
+    int min;
+    int max;
+
     Token(int c, TokenType type) : type(type), c(c), min(0), max(0) {}
-    Token(std::set<int> set) : type(CHARSET), c(0), charSet(set), min(0), max(0) {}
+    Token(std::set<int> set)
+        : type(CHARSET), c(0), charSet(set), min(0), max(0) {}
     Token(int min, int max) : type(INTERVAL), c(0), min(min), max(max) {}
 };
 
