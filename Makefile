@@ -76,8 +76,16 @@ test: all
 
 test-%: all
 	@chmod +x tests/test_runner.sh
-	@FT_LEX="./ft_lex" LIBL="libl.a" PARSER_DIR="tests/parser" DATA_DIR="tests/text" \
-	bash -c 'source tests/test_runner.sh && run_test "tests/parser/$*.l" "tests/text/$*.txt"'
+	@if [ -f "tests/parser/c/$*.l" ]; then \
+		FT_LEX="./ft_lex" LIBL="libl.a" \
+		bash -c 'source tests/test_runner.sh && run_test "tests/parser/c/$*.l" "tests/text/$*.txt"'; \
+	elif [ -f "tests/parser/py/$*.l" ]; then \
+		FT_LEX="./ft_lex" LIBL="libl.a" \
+		bash -c 'source tests/test_runner.sh && run_python_test "tests/parser/py/$*.l" "tests/text/$*.txt"'; \
+	else \
+		echo "Test case $* not found in tests/parser/c or tests/parser/py"; \
+		exit 1; \
+	fi
 
 test-clean:
 	rm -f lex.yy.c lexer_test lexer out.txt test_yyless.l

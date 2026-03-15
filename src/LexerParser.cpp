@@ -470,5 +470,17 @@ void LexerParser::_parseRules() {
         }
     }
 
-end_rules:;
+end_rules:
+    // Handle '|' actions (shared actions)
+    for (int i = (int)_rulesList.size() - 2; i >= 0; --i) {
+        std::string trimmedAction = _rulesList[i].action;
+        size_t s = trimmedAction.find_first_not_of(" \t\n\r");
+        size_t e = trimmedAction.find_last_not_of(" \t\n\r");
+        if (s != std::string::npos && e != std::string::npos) {
+            trimmedAction = trimmedAction.substr(s, e - s + 1);
+        }
+        if (trimmedAction == "|") {
+            _rulesList[i].action = _rulesList[i+1].action;
+        }
+    }
 }
