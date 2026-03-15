@@ -309,10 +309,10 @@ void LexerParser::_parseRules() {
         // Skip leading whitespace of a line
         while (currentPos < _content.size() && (_content[currentPos] == ' ' || _content[currentPos] == '\t' || _content[currentPos] == '\r' || _content[currentPos] == '\n')) {
             advance(1);
-            if (currentPos < _content.size() && _content.substr(currentPos, 2) == "%%") goto end_rules;
+            if (currentPos < _content.size() && _content.substr(currentPos, 2) == "%%") break;
         }
 
-        if (currentPos >= _content.size()) break;
+        if (currentPos >= _content.size() || _content.substr(currentPos, 2) == "%%") break;
 
         Rule rule;
         rule.lineNo = currentLine;
@@ -470,7 +470,6 @@ void LexerParser::_parseRules() {
         }
     }
 
-end_rules:
     // Handle '|' actions (shared actions)
     for (int i = (int)_rulesList.size() - 2; i >= 0; --i) {
         std::string trimmedAction = _rulesList[i].action;
