@@ -6,7 +6,7 @@
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/13 01:11:33 by jikaewsi          #+#    #+#             */
-/*   Updated: 2025/12/13 01:26:07 by jikaewsi         ###   ########.fr       */
+/*   Updated: 2026/03/16 00:14:49 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,8 @@
 #include <string>
 #include <vector>
 
+struct CompressionConfig;
+
 class DFA;
 class LexerParser;
 class CGenerator;
@@ -26,13 +28,14 @@ class AGenerator {
 
   public:
     void generate(const std::vector<DFA> &dfas, const LexerParser &parser,
-                  std::ostream &out);
+                  const CompressionConfig &compression, std::ostream &out);
     virtual ~AGenerator() = default;
 
   protected:
     virtual std::string generateHeader(const LexerParser &parser) = 0;
     virtual std::string generateTables(const std::vector<DFA> &dfas,
-                                       const LexerParser &parser) = 0;
+                                       const LexerParser &parser,
+                                       const CompressionConfig &compression) = 0;
     virtual std::string generateLexerBody(const LexerParser &parser) = 0;
     virtual std::string generateEofActions(const LexerParser &parser) = 0;
     virtual std::string generateUserCode(const LexerParser &parser) = 0;

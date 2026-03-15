@@ -28,12 +28,18 @@ check_deps() {
 run_test() {
     local l_file="$1"
     local txt_file="$2"
+    local flags="$3"
     local name=$(basename "$l_file" .l)
+    
+    local flag_disp=""
+    if [ ! -z "$flags" ]; then
+        flag_disp=" [$flags]"
+    fi
 
-    echo -n "Testing $name... "
+    echo -n "Testing $name$flag_disp... "
 
     # 1. Generate C code
-    $FT_LEX -o "$GEN_C" "$l_file" > /dev/null 2>&1
+    $FT_LEX $flags -o "$GEN_C" "$l_file" > /dev/null 2>&1
     if [ $? -ne 0 ]; then
         echo -e "${RED}FAILED (Generation)${NC}"
         return 1
@@ -180,7 +186,7 @@ run_python_test() {
     local txt_file="$2"
     local name=$(basename "$l_file" .l)
 
-    echo -n "Testing Python target ($name)... "
+    echo -n "Testing Python target ($name) (Polyglotism Bonus)... "
 
     # 1. Generate Python code
     $FT_LEX -l python -o "$GEN_PY" "$l_file" > /dev/null 2>&1
@@ -247,6 +253,37 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         if [ -f "$DATA_DIR/$base.txt" ]; then data="$DATA_DIR/$base.txt"; fi
         run_python_test "$f" "$data"
     done
+
+    # Run tests for each compression flag
+    for flag in "-Ce" "-Cm" "-f" "-F"; do
+        echo -e "\n${YELLOW}--- C Passing Tests [Flag: $flag] ---${NC}"
+        for f in "$PARSER_C_DIR"/*.l; do
+            if [[ $(basename "$f") != error_* && $(basename "$f") != missing_* && $(basename "$f") != multi_* ]]; then
+                base=$(basename "$f" .l)
+                data=""
+                if [ -f "$DATA_DIR/$base.txt" ]; then data="$DATA_DIR/$base.txt"; fi
+                run_test "$f" "$data" "$flag"
+            fi
+        done
+    done
+
+    echo -e "\n${YELLOW}--- Compression Size Bonus Test ---${NC}"
+    echo -n "Testing Compression Ratio (> 2x size reduction)... "
+    # Compile uncompressed
+    $FT_LEX -o "lex.yy.c.uncompressed" "$PARSER_C_DIR/compression_stress.l" > /dev/null 2>&1
+    size_uncompressed=$(wc -c < "lex.yy.c.uncompressed")
+    
+    # Compile compressed (-Cm is maximum compression)
+    $FT_LEX -Cm -o "lex.yy.c.compressed" "$PARSER_C_DIR/compression_stress.l" > /dev/null 2>&1
+    size_compressed=$(wc -c < "lex.yy.c.compressed")
+
+    if [ "$size_compressed" -gt 0 ] && [ "$size_uncompressed" -gt $(($size_compressed * 2)) ]; then
+        echo -e "${GREEN}PASSED ($size_uncompressed bytes -> $size_compressed bytes)${NC}"
+    else
+        echo -e "${RED}FAILED ($size_uncompressed bytes -> $size_compressed bytes, not >2x reduction)${NC}"
+    fi
+    rm "lex.yy.c.uncompressed" "lex.yy.c.compressed" 2>/dev/null
+
 
     echo -e "\n${YELLOW}--- Error Handling Tests ---${NC}"
     run_error_test "$PARSER_C_DIR/error_test.l"

@@ -6,7 +6,7 @@
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/13 01:14:38 by jikaewsi          #+#    #+#             */
-/*   Updated: 2025/12/13 01:29:45 by jikaewsi         ###   ########.fr       */
+/*   Updated: 2026/03/16 00:15:22 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,8 @@ class PythonGenerator : public AGenerator {
   protected:
     std::string generateHeader(const LexerParser &parser) override;
     std::string generateTables(const std::vector<DFA> &dfas,
-                               const LexerParser &parser) override;
+                               const LexerParser &parser,
+                               const CompressionConfig &compression) override;
     std::string generateLexerBody(const LexerParser &parser) override;
     std::string generateEofActions(const LexerParser &parser) override;
     std::string generateUserCode(const LexerParser &parser) override;

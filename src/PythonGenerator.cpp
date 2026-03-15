@@ -6,7 +6,7 @@
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/13 01:30:45 by jikaewsi          #+#    #+#             */
-/*   Updated: 2026/03/14 11:58:01 by jikaewsi         ###   ########.fr       */
+/*   Updated: 2026/03/16 00:15:30 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,7 +73,8 @@ std::string PythonGenerator::generateHeader(const LexerParser &parser) {
 }
 
 std::string PythonGenerator::generateTables(const std::vector<DFA> &dfas,
-                                            const LexerParser &parser) {
+                                            const LexerParser &parser,
+                                            const CompressionConfig &) {
     std::stringstream ss;
     ss << "    # DFA Tables\n";
     const auto &startConds = parser.getStartConditions();

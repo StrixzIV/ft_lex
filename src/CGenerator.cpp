@@ -6,16 +6,20 @@
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/13 01:26:45 by jikaewsi          #+#    #+#             */
-/*   Updated: 2026/03/14 11:57:14 by jikaewsi         ###   ########.fr       */
+/*   Updated: 2026/03/16 00:17:32 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/CGenerator.hpp"
 #include "../include/DFA.hpp"
 #include "../include/LexerParser.hpp"
+#include "../include/ft_lex.hpp"
 
 #include <map>
 #include <sstream>
+#include <vector>
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
 
 std::string CGenerator::generateHeader(const LexerParser &parser) {
 
@@ -31,9 +35,115 @@ std::string CGenerator::generateHeader(const LexerParser &parser) {
     return ss.str();
 }
 
+/* ── Equivalence-class computation ──────────────────────────────────────── */
+
+/**
+ * Compute equivalence classes.
+ *
+ * Two input symbols belong to the same EC iff they produce identical
+ * transition columns across every DFA state.
+ *
+ * Returns yy_ec[258]  (raw symbol → EC id, 0-based).
+ */
+std::vector<int>
+CGenerator::_computeEC(const std::vector<DFA> &dfas,
+                       const std::map<int, int> &idToIndex,
+                       size_t totalStates) {
+
+    // Build the transition column for each of the 258 input symbols.
+    // column[c] = vector of nextState-index for every DFA state in order.
+    std::map<std::vector<int>, int> columnToClass;
+    std::vector<int> ec(258, 0);
+    int nextClass = 0;
+
+    for (int c = 0; c < 258; ++c) {
+        std::vector<int> column;
+        column.reserve(totalStates);
+
+        for (const auto &dfa : dfas) {
+            for (const auto &state : dfa.states) {
+                int nextIdx = -1;
+                auto it = state->transitions.find(c);
+                if (it != state->transitions.end()) {
+                    nextIdx = idToIndex.at(it->second->id);
+                }
+                column.push_back(nextIdx);
+            }
+        }
+
+        auto [iter, inserted] = columnToClass.emplace(column, nextClass);
+        if (inserted)
+            ++nextClass;
+        ec[c] = iter->second;
+    }
+
+    return ec;
+}
+
+/* ── Meta-equivalence-class computation ─────────────────────────────────── */
+
+/**
+ * Compute meta-equivalence classes (operates on top of ECs).
+ *
+ * Two ECs belong to the same meta-EC iff, for every DFA state, they
+ * transition to the same target.  In other words, two ECs that *always*
+ * agree on their next-state across every row can be merged.
+ *
+ * Returns yy_meta[numEC]  (EC id → meta-EC id, 0-based).
+ */
+std::vector<int>
+CGenerator::_computeMetaEC(const std::vector<DFA> &dfas,
+                           const std::map<int, int> &idToIndex,
+                           size_t totalStates,
+                           const std::vector<int> &ec,
+                           int numEC) {
+
+    // For each EC, build its transition column using any representative symbol.
+    // First, find one representative symbol per EC.
+    std::vector<int> ecRep(numEC, -1);
+    for (int c = 0; c < 258; ++c) {
+        if (ecRep[ec[c]] == -1)
+            ecRep[ec[c]] = c;
+    }
+
+    // Build column per EC.
+    std::map<std::vector<int>, int> columnToMeta;
+    std::vector<int> meta(numEC, 0);
+    int nextMeta = 0;
+
+    for (int e = 0; e < numEC; ++e) {
+        int repr = ecRep[e];
+        std::vector<int> column;
+        column.reserve(totalStates);
+
+        for (const auto &dfa : dfas) {
+            for (const auto &state : dfa.states) {
+                int nextIdx = -1;
+                auto it = state->transitions.find(repr);
+                if (it != state->transitions.end()) {
+                    nextIdx = idToIndex.at(it->second->id);
+                }
+                column.push_back(nextIdx);
+            }
+        }
+
+        auto [iter, inserted] = columnToMeta.emplace(column, nextMeta);
+        if (inserted)
+            ++nextMeta;
+        meta[e] = iter->second;
+    }
+
+    return meta;
+}
+
+/* ── Table generation ───────────────────────────────────────────────────── */
+
 std::string CGenerator::generateTables(const std::vector<DFA> &dfas,
-                                       const LexerParser &parser) {
+                                       const LexerParser &parser,
+                                       const CompressionConfig &compression) {
     std::stringstream ss;
+
+    /* ── Start-condition defines ----------------------------------------- */
     ss << "/* Start Conditions Definitions */\n";
     const auto &startConds = parser.getStartConditions();
     for (size_t i = 0; i < startConds.size(); ++i) {
@@ -41,45 +151,168 @@ std::string CGenerator::generateTables(const std::vector<DFA> &dfas,
     }
     ss << "\n";
 
-    ss << "/* DFA Tables */\n";
+    /* ── Prepare idToIndex mapping --------------------------------------- */
     size_t totalStates = 0;
-    for (const auto &dfa : dfas) {
+    for (const auto &dfa : dfas)
         totalStates += dfa.states.size();
-    }
 
     std::map<int, int> idToIndex;
     int currentIndex = 0;
-
-    ss << "static const int yy_start_state_idx[" << dfas.size()
-       << "] = {\n    ";
     for (const auto &dfa : dfas) {
-
         for (const auto &state : dfa.states) {
             idToIndex[state->id] = currentIndex++;
         }
     }
 
+    /* ── Start-state table ---------------------------------------------- */
+    ss << "/* DFA Tables */\n";
+    ss << "static const int yy_start_state_idx[" << dfas.size()
+       << "] = {\n    ";
     for (const auto &dfa : dfas) {
         ss << idToIndex[dfa.start->id] << ", ";
     }
     ss << "\n};\n\n";
 
-    ss << "static const int yy_nxt[" << totalStates << "][258] = {\n";
-    for (const auto &dfa : dfas) {
-        for (const auto &state : dfa.states) {
-            ss << "    {";
-            for (int c = 0; c < 258; ++c) {
-                int nextIdx = -1;
-                if (state->transitions.count(c)) {
-                    nextIdx = idToIndex[state->transitions.at(c)->id];
-                }
-                ss << nextIdx << ",";
-            }
-            ss << "},\n";
-        }
-    }
-    ss << "};\n\n";
+    /* ── Determine table width & emit mapping tables -------------------- */
 
+    if (compression.useEC || compression.useMetaEC) {
+
+        /* Equivalence classes */
+        std::vector<int> ec = _computeEC(dfas, idToIndex, totalStates);
+
+        int numEC = 0;
+        for (int e : ec)
+            if (e + 1 > numEC)
+                numEC = e + 1;
+
+        ss << "static const int yy_ec[258] = {\n    ";
+        for (int c = 0; c < 258; ++c) {
+            ss << ec[c] << ",";
+            if ((c + 1) % 32 == 0)
+                ss << "\n    ";
+        }
+        ss << "\n};\n\n";
+
+        if (compression.useMetaEC) {
+
+            /* Meta-equivalence classes */
+            std::vector<int> meta =
+                _computeMetaEC(dfas, idToIndex, totalStates, ec, numEC);
+
+            int numMeta = 0;
+            for (int m : meta)
+                if (m + 1 > numMeta)
+                    numMeta = m + 1;
+
+            ss << "static const int yy_meta[" << numEC << "] = {\n    ";
+            for (int e = 0; e < numEC; ++e) {
+                ss << meta[e] << ",";
+                if ((e + 1) % 32 == 0)
+                    ss << "\n    ";
+            }
+            ss << "\n};\n\n";
+
+
+            // Emit YY_NXT macro: two-level indirection
+            ss << "#define YY_NXT(state, c) "
+                  "yy_nxt[(state)][yy_meta[yy_ec[(c)]]]\n\n";
+
+            /* Build transition table indexed by meta-EC */
+            // First, build ecToMeta for lookup
+            // We need meta-EC representative column.  The representative
+            // for meta-EC m is the EC with the lowest id mapping to m.
+            std::vector<int> metaRep(numMeta, -1);
+            for (int e = 0; e < numEC; ++e) {
+                if (metaRep[meta[e]] == -1)
+                    metaRep[meta[e]] = e;
+            }
+            // And ec representative symbol
+            std::vector<int> ecRep(numEC, -1);
+            for (int c = 0; c < 258; ++c) {
+                if (ecRep[ec[c]] == -1)
+                    ecRep[ec[c]] = c;
+            }
+
+            ss << "static const int yy_nxt[" << totalStates << "]["
+               << numMeta << "] = {\n";
+            for (const auto &dfa : dfas) {
+                for (const auto &state : dfa.states) {
+                    ss << "    {";
+                    for (int m = 0; m < numMeta; ++m) {
+                        int repr_ec = metaRep[m];
+                        int repr_sym = ecRep[repr_ec];
+                        int nextIdx = -1;
+                        if (repr_sym >= 0) {
+                            auto it = state->transitions.find(repr_sym);
+                            if (it != state->transitions.end())
+                                nextIdx = idToIndex[it->second->id];
+                        }
+                        ss << nextIdx << ",";
+                    }
+                    ss << "},\n";
+                }
+            }
+            ss << "};\n\n";
+
+        } else {
+
+
+            // Emit YY_NXT macro: single-level indirection
+            ss << "#define YY_NXT(state, c) "
+                  "yy_nxt[(state)][yy_ec[(c)]]\n\n";
+
+            /* Build transition table indexed by EC */
+            // Find one representative symbol per EC
+            std::vector<int> ecRep(numEC, -1);
+            for (int c = 0; c < 258; ++c) {
+                if (ecRep[ec[c]] == -1)
+                    ecRep[ec[c]] = c;
+            }
+
+            ss << "static const int yy_nxt[" << totalStates << "]["
+               << numEC << "] = {\n";
+            for (const auto &dfa : dfas) {
+                for (const auto &state : dfa.states) {
+                    ss << "    {";
+                    for (int e = 0; e < numEC; ++e) {
+                        int repr = ecRep[e];
+                        int nextIdx = -1;
+                        if (repr >= 0) {
+                            auto it = state->transitions.find(repr);
+                            if (it != state->transitions.end())
+                                nextIdx = idToIndex[it->second->id];
+                        }
+                        ss << nextIdx << ",";
+                    }
+                    ss << "},\n";
+                }
+            }
+            ss << "};\n\n";
+        }
+
+    } else {
+
+        /* ── Full table (no compression) -------------------------------- */
+        ss << "#define YY_NXT(state, c) yy_nxt[(state)][(c)]\n\n";
+
+        ss << "static const int yy_nxt[" << totalStates << "][258] = {\n";
+        for (const auto &dfa : dfas) {
+            for (const auto &state : dfa.states) {
+                ss << "    {";
+                for (int c = 0; c < 258; ++c) {
+                    int nextIdx = -1;
+                    if (state->transitions.count(c)) {
+                        nextIdx = idToIndex[state->transitions.at(c)->id];
+                    }
+                    ss << nextIdx << ",";
+                }
+                ss << "},\n";
+            }
+        }
+        ss << "};\n\n";
+    }
+
+    /* ── Accept table --------------------------------------------------- */
     ss << "static const int yy_accept[" << totalStates << "] = {\n    ";
     for (const auto &dfa : dfas) {
         for (const auto &state : dfa.states) {
@@ -92,7 +325,9 @@ std::string CGenerator::generateTables(const std::vector<DFA> &dfas,
     }
     ss << "\n};\n\n";
 
-    ss << "static const int yy_trailing_ctx[" << totalStates << "] = {\n    ";
+    /* ── Trailing-context table ----------------------------------------- */
+    ss << "static const int yy_trailing_ctx[" << totalStates
+       << "] = {\n    ";
     for (const auto &dfa : dfas) {
         for (const auto &state : dfa.states) {
             ss << (state->trailingContextBoundary ? 1 : -1) << ", ";
@@ -102,6 +337,8 @@ std::string CGenerator::generateTables(const std::vector<DFA> &dfas,
 
     return ss.str();
 }
+
+/* ── Rule actions switch ────────────────────────────────────────────────── */
 
 std::string CGenerator::generateLexerBody(const LexerParser &parser) {
     return _generateRulesSwitch(parser);
@@ -119,12 +356,16 @@ std::string CGenerator::_generateRulesSwitch(const LexerParser &parser) {
     return ss.str();
 }
 
+/* ── User code ──────────────────────────────────────────────────────────── */
+
 std::string CGenerator::generateUserCode(const LexerParser &parser) {
     std::stringstream ss;
     ss << "\n/* User Code Section */\n";
     ss << parser.getUserCode() << "\n";
     return ss.str();
 }
+
+/* ── EOF actions ────────────────────────────────────────────────────────── */
 
 std::string CGenerator::generateEofActions(const LexerParser &parser) {
     std::stringstream ss;

@@ -6,7 +6,7 @@
 /*   By: jikaewsi <strixz.self@gmail.com>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/13 01:23:08 by jikaewsi          #+#    #+#             */
-/*   Updated: 2026/03/14 11:56:59 by jikaewsi         ###   ########.fr       */
+/*   Updated: 2026/03/16 00:14:51 by jikaewsi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,7 +51,9 @@ std::string AGenerator::loadTemplate(const std::string &template_key) {
 }
 
 void AGenerator::generate(const std::vector<DFA> &dfas,
-                          const LexerParser &parser, std::ostream &out) {
+                          const LexerParser &parser,
+                          const CompressionConfig &compression,
+                          std::ostream &out) {
 
     std::string template_key = "Unknown";
 
@@ -66,7 +68,7 @@ void AGenerator::generate(const std::vector<DFA> &dfas,
     std::string output_code = loadTemplate(template_key);
 
     std::string header = generateHeader(parser);
-    std::string tables = generateTables(dfas, parser);
+    std::string tables = generateTables(dfas, parser, compression);
     std::string lexer_body = generateLexerBody(parser);
     std::string eof_actions = generateEofActions(parser);
     std::string user_code = generateUserCode(parser);

@@ -123,7 +123,7 @@ __EOF_ACTION_PLACEHOLDER__
          * via the pseudo-char 256. This does NOT consume 'c'; 'c' is still the
          * first real character and will be used for the normal transition below. */
         if (yy_at_bol) {
-            int anchor_state = yy_nxt[current_state][256];
+            int anchor_state = YY_NXT(current_state, 256);
             if (anchor_state != -1) {
                 current_state = anchor_state;
                 if (yy_accept[current_state] != -1) {
@@ -136,7 +136,7 @@ __EOF_ACTION_PLACEHOLDER__
         /* If first char is '\n', check EOL anchor from current_state
          * (the match ends before the '\n') */
         if (c == '\n') {
-            int eol_state = yy_nxt[current_state][257];
+            int eol_state = YY_NXT(current_state, 257);
             if (eol_state != -1 && yy_accept[eol_state] != -1) {
                 last_accepting_state = eol_state;
                 last_accepting_idx = buf_idx;
@@ -149,7 +149,7 @@ __EOF_ACTION_PLACEHOLDER__
         yy_buffer[buf_idx] = '\0';
 
         /* Normal DFA transition on the first real char */
-        next_state = yy_nxt[current_state][(unsigned char)c];
+        next_state = YY_NXT(current_state, (unsigned char)c);
 
         while (next_state != -1) {
 
@@ -167,7 +167,7 @@ __EOF_ACTION_PLACEHOLDER__
             c = fgetc(yyin);
             if (c == EOF) {
                 /* Check EOL anchor on EOF (treat end-of-file like end-of-line) */
-                int eol_state = yy_nxt[current_state][257];
+                int eol_state = YY_NXT(current_state, 257);
                 if (eol_state != -1 && yy_accept[eol_state] != -1) {
                     last_accepting_state = eol_state;
                     last_accepting_idx = buf_idx;
@@ -178,7 +178,7 @@ __EOF_ACTION_PLACEHOLDER__
             /* If char is '\n', check EOL anchor from current_state
              * (the match ends before the '\n') */
             if (c == '\n') {
-                int eol_state = yy_nxt[current_state][257];
+                int eol_state = YY_NXT(current_state, 257);
                 if (eol_state != -1 && yy_accept[eol_state] != -1) {
                     last_accepting_state = eol_state;
                     last_accepting_idx = buf_idx;
@@ -189,7 +189,7 @@ __EOF_ACTION_PLACEHOLDER__
             yy_buffer[buf_idx++] = (char)c;
             yy_buffer[buf_idx] = '\0';
 
-            next_state = yy_nxt[current_state][(unsigned char)c];
+            next_state = YY_NXT(current_state, (unsigned char)c);
         }
 
         /* No more transitions. */

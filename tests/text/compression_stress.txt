@@ -1,0 +1,8 @@
+if else while for
+x = 42.5 + 1337
+"Hello World\n"
+while (x > 0) x = x - 1
+_variable_name
+12345
+"unterminated string
+@#$&*
