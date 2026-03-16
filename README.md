@@ -173,8 +173,9 @@ int main(void) { return yylex(); }
 3. **`%{ ... %}` extraction** — pulls verbatim C/Python blocks out of the definitions section and stores them as `_definitions`.
 4. **Named definitions** (`NAME  regex`) — stored in `_namedDefinitions` and lazily expanded inside rule regexes with `_expandDefinitions()`. Expansion is iterative to support chained references.
 5. **Start conditions** — `%s NAME` (inclusive) and `%x NAME` (exclusive) are parsed into `_startConditions`. Rules prefixed with `<COND>` are tagged accordingly; a rule with no prefix applies only in inclusive conditions.
-6. **Rule extraction** — for each rule, the parser carefully walks character-by-character respecting bracket classes `[...]`, quoted strings `"..."`, escape sequences `\\`, and brace-delimited actions `{...}`. The `|` continuation syntax (action shared with the next rule) is resolved in a post-processing pass.
-7. **`<<EOF>>` rules** — mapped by start-condition index into `_eofActions`.
+6. **Directives** — handles `%array` (default, fixed-size `yytext`) and `%pointer` (char pointer `yytext`).
+7. **Rule extraction** — for each rule, the parser carefully walks character-by-character respecting bracket classes `[...]`, quoted strings `"..."`, escape sequences `\\` (including octal and hex), and brace-delimited actions `{...}`. The `|` continuation syntax (action shared with the next rule) is resolved in a post-processing pass.
+8. **`<<EOF>>` rules** — mapped by start-condition index into `_eofActions`. Action code is wrapped in `if/else if` blocks (like regular rules) so that `return` escapes `yylex()`.
 
 ### `.l` parsing flow
 
@@ -201,12 +202,16 @@ Each rule's regex string is converted to a **postfix (Reverse Polish Notation)**
 | Syntax | Meaning |
 |---|---|
 | `c` | Literal character |
-| `.` | Any character except `<br>` (expands to a charset of 255 chars) |
+| `.` | Any character except `\n` (expands to a charset of 255 chars) |
 | `[abc]` | Character class |
-| `[^abc]` | Negated character class |
-| `[[:alpha:]]` | POSIX character class (`alpha`, `digit`, `alnum`, `upper`, `lower`, `space`, `blank`, `print`, `graph`, `cntrl`, `xdigit`) |
+| `[^abc]` | Negated character class (supports full 0-255 range) |
+| `[[:alpha:]]` | POSIX character class (`alpha`, `digit`, `alnum`, `upper`, `lower`, `space`, `blank`, `print`, `graph`, `cntrl`, `xdigit`, `punct`). Locale-aware. |
+| `[[.ch.]]` | Collating element (single characters supported) |
+| `[[=a=]]` | Equivalence class (single characters supported) |
 | `"string"` | Literal string (special chars treated as literals) |
-| `<br> \t \r \v \f` | Escape sequences |
+| `\n \t \r \v \f \a` | Escape sequences (including Alert/Bell) |
+| `\012` | Octal escape (1-3 digits) |
+| `\x41` | Hex escape (1 or more digits) |
 | `r*` | Kleene star (zero or more) |
 | `r+` | One or more |
 | `r?` | Zero or one |
@@ -452,7 +457,7 @@ while (1) {
     state = next;
     if (yy_accept[state]) last_accept = state;
 }
-/* dispatch action for last_accept (longest match) */
+/* dispatch action for last_accept (longest match) using if/else if chain */
 ```
 
 ---
@@ -471,9 +476,9 @@ These are declared `extern` in the generated scanner and defined once in `libl`:
 |---|---|---|
 | `yyin` | `FILE *` | Input stream (default: `stdin`) |
 | `yyout` | `FILE *` | Output stream (default: `stdout`) |
-| `yytext` | `char *` | NUL-terminated current token string |
+| `yytext` | `char *` or `char[]` | Current token string (Type depends on `%pointer` / `%array` mode) |
 | `yyleng` | `int` | Length of `yytext` |
-| `yylineno` | `int` | Current source line number (auto-incremented on `<br>`) |
+| `yylineno` | `int` | Current source line number (tracked during DFA scan and backtracking) |
 | `yy_start` | `int` | Active start condition index |
 | `yy_at_bol` | `int` | 1 if at beginning of line |
 | `yy_more_flag` / `yy_more_len` | `int` | Internal state for `yymore()` |
@@ -487,7 +492,7 @@ flowchart TB
     yw["yywrap.c<br>yywrap()<br>Default: return 1 (stop)<br>Weak — user overrides<br>to chain input files<br>by returning 0"]
     inp["input.c<br>input()<br>Read next raw char<br>bypassing yytext buffer;<br>updates yylineno on newline"]
     unp["unput.c<br>unput(c)<br>Push c back via ungetc();<br>decrements yylineno if newline;<br>restores hold-char first"]
-    yl["yyless.c<br>yyless(n)<br>Push back chars [n..yyleng)<br>into input; truncates yytext<br>to length n; fixes yylineno"]
+    yl["yyless (moved to template)<br>yyless(n)<br>Push back chars [n..yyleng)<br>into input; truncates yytext<br>to length n; fixes yylineno"]
     ym["yymore.c<br>yymore()<br>Sets yy_more_flag;<br>next yylex iteration<br>appends to current yytext<br>rather than resetting it"]
 ```
 
@@ -508,15 +513,15 @@ int yywrap(void) {
 
 #### `input()` — manual character read
 
-Reads one character directly from `yyin`, bypassing the normal `yytext` buffering. Before reading, it restores `yy_hold_char` (the character that was temporarily overwritten with `\0` to NUL-terminate `yytext`). Increments `yylineno` on `<br>`.
+Reads one character directly from `yyin`, bypassing the normal `yytext` buffering. Before reading, it calls `yy_restore_hold_char()` (defined in the generated scanner) to handle hold-char restoration without needing to know `yytext`'s exact type. Increments `yylineno` on `\n`.
 
 #### `unput(c)` — push back a character
 
-Calls `ungetc(c, yyin)` and adjusts `yylineno` if `c` is a newline. Restores the hold-char first to keep the buffer consistent.
+Calls `ungetc((unsigned char)c, yyin)` and adjusts `yylineno` if `c` is a newline. Restores the hold-char via helper first.
 
 #### `yyless(n)` — shorten the current match
 
-Pushes the characters from position `n` to `yyleng-1` back into `yyin` via `ungetc()` one-by-one (in reverse), decrementing `yylineno` for any `<br>` among them. Truncates `yytext` to length `n` and re-establishes the hold-char. The next invocation of `yylex()` will re-match those pushed-back characters.
+(Now implemented in `template.c` for direct `yytext` access). Pushes the characters from position `n` to `yyleng-1` back into `yyin` via `ungetc()` one-by-one (in reverse), decrementing `yylineno` for any `\n` among them. Truncates `yytext` to length `n`.
 
 #### `yymore()` — extend into the next match
 
