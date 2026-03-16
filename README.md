@@ -118,17 +118,17 @@ The full pipeline transforms a textual `.l` specification into a running lexer i
 
 ```mermaid
 flowchart TD
-    A["📄 Input: scanner.l\n(definitions, rules, user code)"]
-    B["LexerParser\n─────────────\nSplit sections\nExpand named defs\nCollect rules & start conds"]
-    C["RegexParser\n─────────────\nTokenize regex\nInsert explicit concat ops\nShunting-yard → postfix"]
-    D["NFA Builder\n─────────────\nThompson's Construction\nOne NFA per rule\nMerge into master NFA"]
-    E["DFA Builder\n─────────────\nSubset Construction\nε-closure + move()\nPriority-aware accepting states"]
-    F{"Target\nLanguage?"}
-    G["CGenerator\n─────────────\nEmit yy_nxt[][] tables\nOptional EC / MetaEC\nFill C template"]
-    H["PythonGenerator\n─────────────\nEmit Python DFA tables\nTranslate actions\nFill Python template"]
+    A["📄 Input: scanner.l<br>(definitions, rules, user code)"]
+    B["LexerParser<br>─────────────<br>Split sections<br>Expand named defs<br>Collect rules & start conds"]
+    C["RegexParser<br>─────────────<br>Tokenize regex<br>Insert explicit concat ops<br>Shunting-yard → postfix"]
+    D["NFA Builder<br>─────────────<br>Thompson's Construction<br>One NFA per rule<br>Merge into master NFA"]
+    E["DFA Builder<br>─────────────<br>Subset Construction<br>ε-closure + move()<br>Priority-aware accepting states"]
+    F{"Target<br>Language?"}
+    G["CGenerator<br>─────────────<br>Emit yy_nxt[][] tables<br>Optional EC / MetaEC<br>Fill C template"]
+    H["PythonGenerator<br>─────────────<br>Emit Python DFA tables<br>Translate actions<br>Fill Python template"]
     I["📄 Output: lex.yy.c"]
     J["📄 Output: lex.yy.py"]
-    K["libl.a\n─────────────\nyylex runtime\nyywrap / input / unput\nyyless / yymore"]
+    K["libl.a<br>─────────────<br>yylex runtime<br>yywrap / input / unput<br>yyless / yymore"]
 
     A --> B --> C --> D --> E --> F
     F -->|C| G --> I
@@ -157,8 +157,8 @@ ALPHA  [a-zA-Z]
 %%
 
 /* Rules */
-{DIGIT}+   { printf("NUMBER: %s\n", yytext); }
-{ALPHA}+   { printf("WORD: %s\n", yytext); }
+{DIGIT}+   { printf("NUMBER: %s<br>", yytext); }
+{ALPHA}+   { printf("WORD: %s<br>", yytext); }
 
 %%
 
@@ -180,11 +180,11 @@ int main(void) { return yylex(); }
 
 ```mermaid
 flowchart LR
-    F["Raw file(s)"] --> R["_readFile()\nconcat + line tracking"]
-    R --> S["_splitSections()\nfind %% boundaries"]
-    S --> D["_parseDefinitions()\n%{...%}, %s/%x, NAME regex"]
-    S --> U["_parseRules()\n< COND > regex  action\n<<EOF>> action"]
-    D --> E["_expandDefinitions()\n{NAME} -> (regex)"]
+    F["Raw file(s)"] --> R["_readFile()<br>concat + line tracking"]
+    R --> S["_splitSections()<br>find %% boundaries"]
+    S --> D["_parseDefinitions()<br>%{...%}, %s/%x, NAME regex"]
+    S --> U["_parseRules()<br>< COND > regex  action<br><<EOF>> action"]
+    D --> E["_expandDefinitions()<br>{NAME} -> (regex)"]
     E --> U
 ```
 
@@ -201,12 +201,12 @@ Each rule's regex string is converted to a **postfix (Reverse Polish Notation)**
 | Syntax | Meaning |
 |---|---|
 | `c` | Literal character |
-| `.` | Any character except `\n` (expands to a charset of 255 chars) |
+| `.` | Any character except `<br>` (expands to a charset of 255 chars) |
 | `[abc]` | Character class |
 | `[^abc]` | Negated character class |
 | `[[:alpha:]]` | POSIX character class (`alpha`, `digit`, `alnum`, `upper`, `lower`, `space`, `blank`, `print`, `graph`, `cntrl`, `xdigit`) |
 | `"string"` | Literal string (special chars treated as literals) |
-| `\n \t \r \v \f` | Escape sequences |
+| `<br> \t \r \v \f` | Escape sequences |
 | `r*` | Kleene star (zero or more) |
 | `r+` | One or more |
 | `r?` | Zero or one |
@@ -225,10 +225,10 @@ Each rule's regex string is converted to a **postfix (Reverse Polish Notation)**
 ```mermaid
 flowchart TD
     A["Raw regex string"]
-    B["_tokenize()\n• Handle \\ escapes\n• Expand [...] into CHARSET tokens\n• Expand {n,m} into INTERVAL tokens\n• Map . to full charset\n• Handle ^ / $ / / specially"]
-    C["_addExplicitConcat()\nInsert CONCAT_OP between\nadjacent operands"]
-    D["Shunting-yard loop\n• Operands -> postfix output\n• Operators -> operator stack\n  using precedence:\n  {*,+,?,intervals} > concat > |"]
-    E["Postfix token stream\ne.g.  a b . c . | d* ."]
+    B["_tokenize()<br>• Handle \\ escapes<br>• Expand [...] into CHARSET tokens<br>• Expand {n,m} into INTERVAL tokens<br>• Map . to full charset<br>• Handle ^ / $ / / specially"]
+    C["_addExplicitConcat()<br>Insert CONCAT_OP between<br>adjacent operands"]
+    D["Shunting-yard loop<br>• Operands -> postfix output<br>• Operators -> operator stack<br>  using precedence:<br>  {*,+,?,intervals} > concat > |"]
+    E["Postfix token stream<br>e.g.  a b . c . | d* ."]
 
     A --> B --> C --> D --> E
 ```
@@ -275,18 +275,18 @@ graph TB
 
     subgraph makeUnion["makeUnion(A, B): alternation"]
         direction TB
-        su(("new\nstart")) -- "ε" --> ua(("A.start"))
+        su(("new<br>start")) -- "ε" --> ua(("A.start"))
         su -- "ε" --> ub(("B.start"))
-        ua --> ea2(("A.end")) -- "ε" --> eu(("new\nend✓"))
+        ua --> ea2(("A.end")) -- "ε" --> eu(("new<br>end✓"))
         ub --> eb2(("B.end")) -- "ε" --> eu
     end
 
     subgraph makeKleene["makeKleene(A): A*"]
         direction LR
-        sk(("new\nstart")) -- "ε" --> uk(("A.start"))
+        sk(("new<br>start")) -- "ε" --> uk(("A.start"))
         uk --> ek(("A.end"))
         ek -- "ε (loop)" --> uk
-        sk -- "ε (skip)" --> fk(("new\nend✓"))
+        sk -- "ε (skip)" --> fk(("new<br>end✓"))
         ek -- "ε (exit)" --> fk
     end
 ```
@@ -301,7 +301,7 @@ graph TB
 | One-or-more `+` | `makePlus(nfa)` — first copy + Kleene |
 | Zero-or-one `?` | `makeOption(nfa)` — union with empty path |
 | Repeat `{n,m}` | `makeRepeat(nfa, n, m)` — unrolls via `nfa.copy()` |
-| Any char `.` | `makeAnyChar()` — charset of all non-`\n` bytes |
+| Any char `.` | `makeAnyChar()` — charset of all non-`<br>` bytes |
 | Trailing context `/` | `makeTrailingContext(r1, r2)` — sets boundary flag on r1's accept state |
 
 ### Master NFA per start condition
@@ -316,9 +316,9 @@ After all rules for a given start condition are converted, they are wired into a
 flowchart LR
     MS["masterStart"]
     BL["bolStart"]
-    N1["NFA₁\n(rule 0, prio=0)"]
-    N2["NFA₂\n(rule 1, prio=1)"]
-    N3["NFA₃\n(rule 2, prio=2)"]
+    N1["NFA₁<br>(rule 0, prio=0)"]
+    N2["NFA₂<br>(rule 1, prio=1)"]
+    N3["NFA₃<br>(rule 2, prio=2)"]
 
     MS -- "ε" --> N1
     MS -- "ε" --> N2
@@ -340,14 +340,14 @@ The **Subset Construction** converts the NFA — which can occupy multiple state
 
 ```mermaid
 flowchart TD
-    A["Compute ε-closure(NFA start)\n→ initial DFA state D₀"]
+    A["Compute ε-closure(NFA start)<br>→ initial DFA state D₀"]
     B["Worklist: push D₀"]
-    C{"Worklist\nempty?"}
-    D["Pop DFA state D\nCollect all input symbols c\nthat have transitions\nfrom any of D's NFA states"]
-    E["For each input c:\n  move(D, c): NFA states reachable via c\n  ε-closure(move): follow all ε-transitions\n  → candidate NFA state set S"]
-    F{"S already\nmapped to\na DFA state?"}
-    G["Create new DFAState\nfor S; push to worklist\nRecord accepting state + priority"]
-    H["Add transition\nD --c--> existing DFA state"]
+    C{"Worklist<br>empty?"}
+    D["Pop DFA state D<br>Collect all input symbols c<br>that have transitions<br>from any of D's NFA states"]
+    E["For each input c:<br>  move(D, c): NFA states reachable via c<br>  ε-closure(move): follow all ε-transitions<br>  → candidate NFA state set S"]
+    F{"S already<br>mapped to<br>a DFA state?"}
+    G["Create new DFAState<br>for S; push to worklist<br>Record accepting state + priority"]
+    H["Add transition<br>D --c--> existing DFA state"]
     I["DFA complete"]
 
     A --> B --> C
@@ -376,21 +376,20 @@ To illustrate how the DFA handles overlapping rules, consider these two rules:
 ```
 
 ```mermaid
-stateDiagram-v2
-    direction LR
+flowchart LR
+    START((" ")) -->|start| S0
 
-    [*] --> S0 : start
-    S0 --> S1 : 'i'
-    S0 --> S3 : [a-hj-z]
+    S0(["S0<br>start"])
+    S1(["S1<br>saw 'i'"])
+    S2(["✓ S2<br>ACCEPT rule 0<br>KW_IF"])
+    S3(["✓ S3<br>ACCEPT rule 1<br>IDENTIFIER"])
 
-    S1 --> S2 : 'f'
-    S1 --> S3 : [a-eg-z]
-
-    S2 --> S3 : [a-z]
-    S3 --> S3 : [a-z]
-
-    note right of S2 : ACCEPT — rule 0: KW_IF\n(only if no more a-z follow)
-    note right of S3 : ACCEPT — rule 1: IDENTIFIER
+    S0 -->|"'i'"| S1
+    S0 -->|"a-h, j-z"| S3
+    S1 -->|"'f'"| S2
+    S1 -->|"a-e, g-z"| S3
+    S2 -->|"a-z"| S3
+    S3 -->|"a-z"| S3
 ```
 
 Tracing `"iffy"`:
@@ -474,7 +473,7 @@ These are declared `extern` in the generated scanner and defined once in `libl`:
 | `yyout` | `FILE *` | Output stream (default: `stdout`) |
 | `yytext` | `char *` | NUL-terminated current token string |
 | `yyleng` | `int` | Length of `yytext` |
-| `yylineno` | `int` | Current source line number (auto-incremented on `\n`) |
+| `yylineno` | `int` | Current source line number (auto-incremented on `<br>`) |
 | `yy_start` | `int` | Active start condition index |
 | `yy_at_bol` | `int` | 1 if at beginning of line |
 | `yy_more_flag` / `yy_more_len` | `int` | Internal state for `yymore()` |
@@ -484,12 +483,12 @@ These are declared `extern` in the generated scanner and defined once in `libl`:
 
 ```mermaid
 flowchart TB
-    main_c["main.c\nmain() calls yylex()\n(weak symbol — overrideable\nby user-defined main)"]
-    yw["yywrap.c\nyywrap()\nDefault: return 1 (stop)\nWeak — user overrides\nto chain input files\nby returning 0"]
-    inp["input.c\ninput()\nRead next raw char\nbypassing yytext buffer;\nupdates yylineno on newline"]
-    unp["unput.c\nunput(c)\nPush c back via ungetc();\ndecrements yylineno if newline;\nrestores hold-char first"]
-    yl["yyless.c\nyyless(n)\nPush back chars [n..yyleng)\ninto input; truncates yytext\nto length n; fixes yylineno"]
-    ym["yymore.c\nyymore()\nSets yy_more_flag;\nnext yylex iteration\nappends to current yytext\nrather than resetting it"]
+    main_c["main.c<br>main() calls yylex()<br>(weak symbol — overrideable<br>by user-defined main)"]
+    yw["yywrap.c<br>yywrap()<br>Default: return 1 (stop)<br>Weak — user overrides<br>to chain input files<br>by returning 0"]
+    inp["input.c<br>input()<br>Read next raw char<br>bypassing yytext buffer;<br>updates yylineno on newline"]
+    unp["unput.c<br>unput(c)<br>Push c back via ungetc();<br>decrements yylineno if newline;<br>restores hold-char first"]
+    yl["yyless.c<br>yyless(n)<br>Push back chars [n..yyleng)<br>into input; truncates yytext<br>to length n; fixes yylineno"]
+    ym["yymore.c<br>yymore()<br>Sets yy_more_flag;<br>next yylex iteration<br>appends to current yytext<br>rather than resetting it"]
 ```
 
 #### `main()` — weak entry point
@@ -509,7 +508,7 @@ int yywrap(void) {
 
 #### `input()` — manual character read
 
-Reads one character directly from `yyin`, bypassing the normal `yytext` buffering. Before reading, it restores `yy_hold_char` (the character that was temporarily overwritten with `\0` to NUL-terminate `yytext`). Increments `yylineno` on `\n`.
+Reads one character directly from `yyin`, bypassing the normal `yytext` buffering. Before reading, it restores `yy_hold_char` (the character that was temporarily overwritten with `\0` to NUL-terminate `yytext`). Increments `yylineno` on `<br>`.
 
 #### `unput(c)` — push back a character
 
@@ -517,7 +516,7 @@ Calls `ungetc(c, yyin)` and adjusts `yylineno` if `c` is a newline. Restores the
 
 #### `yyless(n)` — shorten the current match
 
-Pushes the characters from position `n` to `yyleng-1` back into `yyin` via `ungetc()` one-by-one (in reverse), decrementing `yylineno` for any `\n` among them. Truncates `yytext` to length `n` and re-establishes the hold-char. The next invocation of `yylex()` will re-match those pushed-back characters.
+Pushes the characters from position `n` to `yyleng-1` back into `yyin` via `ungetc()` one-by-one (in reverse), decrementing `yylineno` for any `<br>` among them. Truncates `yytext` to length `n` and re-establishes the hold-char. The next invocation of `yylex()` will re-match those pushed-back characters.
 
 #### `yymore()` — extend into the next match
 
@@ -547,11 +546,11 @@ At runtime: `next = yy_nxt[state][yy_ec[(unsigned char)c]]`.
 ```mermaid
 flowchart LR
     subgraph Before["Full tables (-Cf)"]
-        T1["yy_nxt\n[N × 258 ints]"]
+        T1["yy_nxt<br>[N × 258 ints]"]
     end
     subgraph After["With EC (-Ce)"]
-        EC["yy_ec[258]\n(raw -> EC id)"]
-        T2["yy_nxt\n[N × numEC ints]"]
+        EC["yy_ec[258]<br>(raw -> EC id)"]
+        T2["yy_nxt<br>[N × numEC ints]"]
     end
     Before -->|"compress"| After
 ```
