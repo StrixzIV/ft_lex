@@ -185,10 +185,9 @@ NFA NFA::makeAnyChar(int &stateCounter) {
     auto start = std::make_shared<State>(stateCounter++);
     auto end = std::make_shared<State>(stateCounter++);
 
-    for (int i = -128; i <= 127; ++i) {
-        char c = (char)i;
-        if (c != '\n') {
-            start->transitions.insert({c, end});
+    for (int i = 0; i < 256; ++i) {
+        if (i != '\n') {
+            start->transitions.insert({i, end});
         }
     }
     return NFA(start, end);

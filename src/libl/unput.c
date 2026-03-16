@@ -17,15 +17,16 @@ int unput(int c) {
     return EOF;
   }
 
-  if (!yy_hold_char_restored) {
-    yytext[yyleng] = yy_hold_char;
-    yy_hold_char_restored = 1;
-  }
+  yy_restore_hold_char();
 
   if (c == '\n') {
     yylineno--;
-    /* We can't easily know if the char BEFORE this new BOL is '\n'
-       to set yy_at_bol correctly, but the driver loop will handle it. */
+    /* yy_at_bol restoration after unput('\n') is best-effort.
+       We can't easily know if the char BEFORE this new BOL is '\n'
+       without peeking into the stream, which is not always possible. */
+    yy_at_bol = 0; // Defaulting to 0 after unput('\n') as we are now BEFORE the newline
+  } else {
+    yy_at_bol = 0;
   }
 
   ungetc((unsigned char)c, yyin);

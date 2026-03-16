@@ -27,6 +27,7 @@ class LexerParser {
         std::string action;
         std::vector<std::string> startConditions;
         int lineNo;
+        bool hasBOL;
     };
 
     struct StartCondition {
@@ -46,6 +47,7 @@ class LexerParser {
     const std::map<std::string, std::string> &getNamedDefinitions() const;
     const std::vector<StartCondition> &getStartConditions() const;
     const std::map<int, std::string> &getEofActions() const;
+    bool isPointerMode() const;
 
     std::string formatError(int line, int col, const std::string &msg) const;
 
@@ -69,6 +71,7 @@ class LexerParser {
     std::vector<StartCondition> _startConditions;
     std::map<int, std::string> _eofActions;
     int _lineNo;
+    bool _usePointerMode;
 
     void _readFile();
     void _splitSections();

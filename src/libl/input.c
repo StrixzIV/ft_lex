@@ -13,10 +13,7 @@
 #include "libl.h"
 
 int input(void) {
-  if (!yy_hold_char_restored) {
-    yytext[yyleng] = yy_hold_char;
-    yy_hold_char_restored = 1;
-  }
+  yy_restore_hold_char();
   int c = yy_read_char();
   if (c == '\n') {
     yylineno++;
@@ -24,5 +21,5 @@ int input(void) {
   } else if (c != EOF) {
     yy_at_bol = 0;
   }
-  return c == EOF ? 0 : c;
+  return c;
 }

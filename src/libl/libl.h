@@ -21,7 +21,9 @@
 extern FILE *yyin;
 extern FILE *yyout;
 
-extern char *yytext;
+// yytext is either char * or char[] depending on %pointer / %array
+// We should NOT declare it here as its type varies.
+// Functions that need to interact with yytext should call helpers in lex.yy.c.
 extern int yyleng;
 extern int yylineno;
 
@@ -56,5 +58,6 @@ int yymore(void);
 
 void buffer_realloc(int needed);
 int yy_read_char(void);
+void yy_restore_hold_char(void);
 
 #endif

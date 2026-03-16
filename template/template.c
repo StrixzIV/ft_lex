@@ -3,12 +3,22 @@
 #include <stdio.h>
 #include <string.h>
 
+__HEADER_PLACEHOLDER__
+
 /* --- Shared variables --- */
+
+#ifndef YYLMAX
+#define YYLMAX 200
+#endif
 
 FILE *yyin   = NULL;
 FILE *yyout  = NULL;
 
+#ifdef YY_USE_POINTER
 char *yytext   = NULL;
+#else
+char  yytext[YYLMAX];
+#endif
 int   yyleng   = 0;
 int   yylineno = 1;
 
@@ -33,21 +43,61 @@ int yy_more_len  = 0;
 /* --- Library functions (provided by libl) --- */
 
 extern int yywrap(void);
-extern int yyless(int n);
 extern int input(void);
 extern int unput(int c);
 extern int yymore(void);
+
+int yyless(int n) {
+  if (n < 0 || n > yyleng) {
+    return -1;
+  }
+
+  /* Restore the character that was replaced by '\0' by the driver */
+  if (!yy_hold_char_restored) {
+    yytext[yyleng] = yy_hold_char;
+    yy_hold_char_restored = 1;
+  }
+
+  /* Push back characters from yyleng-1 down to n and update yylineno */
+  for (int i = yyleng - 1; i >= n; i--) {
+    unsigned char c = (unsigned char)yytext[i];
+    if (c == '\n') {
+      yylineno--;
+    }
+    ungetc(c, yyin);
+  }
+
+  yyleng = n;
+  yytext[yyleng] = '\0';
+
+  /* Re-capture the new hold char */
+  yy_hold_char = (unsigned char)yytext[yyleng];
+  yy_hold_char_restored = 1;
+
+  /* Update BOL status: if last kept char is '\n', next match is at BOL.
+     If n == 0, we must check if the char BEFORE this match was '\n'. */
+  if (yyleng > 0) {
+    yy_at_bol = (yytext[yyleng - 1] == '\n');
+  }
+
+  return 0;
+}
 
 #define BEGIN(state) (yy_start = (state))
 #ifndef ECHO
 #define ECHO fprintf(yyout, "%s", yytext)
 #endif
 
-__HEADER_PLACEHOLDER__
-
 __TABLES_PLACEHOLDER__
 
 /* --- Internal helpers --- */
+
+void yy_restore_hold_char(void) {
+    if (!yy_hold_char_restored) {
+        yytext[yyleng] = yy_hold_char;
+        yy_hold_char_restored = 1;
+    }
+}
 
 int yy_buf_ensure(int needed) {
     if (yy_buf_cap >= needed)
@@ -102,6 +152,7 @@ int yylex(void) {
         /* Handle yymore(): keep previous match text */
         if (yy_more_flag) {
             buf_idx = yy_more_len;
+            yyleng = yy_more_len;
             yy_more_flag = 0;
         }
 
@@ -145,6 +196,8 @@ __EOF_ACTION_PLACEHOLDER__
 
         /* Push first char to buffer */
         if (yy_buf_ensure(buf_idx + 2) < 0) return -1;
+        if (c == '\n') yylineno++;
+        yy_at_bol = (c == '\n');
         yy_buffer[buf_idx++] = (char)c;
         yy_buffer[buf_idx] = '\0';
 
@@ -186,6 +239,8 @@ __EOF_ACTION_PLACEHOLDER__
             }
 
             if (yy_buf_ensure(buf_idx + 2) < 0) return -1;
+            if (c == '\n') yylineno++;
+            yy_at_bol = (c == '\n');
             yy_buffer[buf_idx++] = (char)c;
             yy_buffer[buf_idx] = '\0';
 
@@ -205,18 +260,22 @@ __EOF_ACTION_PLACEHOLDER__
             }
             while (buf_idx > last_accepting_idx) {
                 int ch = (unsigned char)yy_buffer[--buf_idx];
+                if (ch == '\n') yylineno--;
                 ungetc(ch, yyin);
             }
             yy_buffer[buf_idx] = '\0';
-            
-            // Re-calc yylineno based on actual matched chars
-            for (int i = 0; i < buf_idx; i++) {
-                if (yy_buffer[i] == '\n')
-                    yylineno++;
-            }
 
+#ifdef YY_USE_POINTER
             yytext = yy_buffer;
             yyleng = buf_idx;
+#else
+            {
+                int copy_len = (buf_idx < YYLMAX - 1) ? buf_idx : YYLMAX - 1;
+                memcpy(yytext, yy_buffer, copy_len);
+                yytext[copy_len] = '\0';
+                yyleng = copy_len;
+            }
+#endif
 
             // Update yy_at_bol
             if (yyleng > 0 && yytext[yyleng - 1] == '\n') {
@@ -233,9 +292,7 @@ __EOF_ACTION_PLACEHOLDER__
             yy_buf_pos = buf_idx;
             yy_buf_len = buf_idx;
 
-            switch (yy_accept[last_accepting_state]) {
 __YYLEX_BODY_PLACEHOLDER__
-            }
 
             /* Restore hold char after action */
             if (!yy_hold_char_restored) {
@@ -251,11 +308,11 @@ __YYLEX_BODY_PLACEHOLDER__
             fputc((unsigned char)yy_buffer[0], yyout);
             while (buf_idx > 1) {
                 char ch = yy_buffer[--buf_idx];
+                if (ch == '\n') yylineno--;
                 ungetc((unsigned char)ch, yyin);
             }
             if (yy_buffer[0] == '\n') {
                 yy_at_bol = 1;
-                yylineno++;
             } else {
                 yy_at_bol = 0;
             }

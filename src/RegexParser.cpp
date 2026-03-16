@@ -12,6 +12,8 @@
 
 #include "../include/RegexParser.hpp"
 
+#include <cctype>
+#include <iostream>
 #include <stack>
 #include <stdexcept>
 
@@ -69,54 +71,22 @@ std::vector<Token> RegexParser::toPostfix(const std::string &regex) {
 
 static std::set<int> _getPOSIXClass(const std::string &name) {
     std::set<int> s;
-    if (name == "alpha") {
-        for (int c = 'a'; c <= 'z'; ++c)
-            s.insert(c);
-        for (int c = 'A'; c <= 'Z'; ++c)
-            s.insert(c);
-    } else if (name == "upper") {
-        for (int c = 'A'; c <= 'Z'; ++c)
-            s.insert(c);
-    } else if (name == "lower") {
-        for (int c = 'a'; c <= 'z'; ++c)
-            s.insert(c);
-    } else if (name == "digit") {
-        for (int c = '0'; c <= '9'; ++c)
-            s.insert(c);
-    } else if (name == "alnum") {
-        for (int c = 'a'; c <= 'z'; ++c)
-            s.insert(c);
-        for (int c = 'A'; c <= 'Z'; ++c)
-            s.insert(c);
-        for (int c = '0'; c <= '9'; ++c)
-            s.insert(c);
-    } else if (name == "space") {
-        s.insert(' ');
-        s.insert('\t');
-        s.insert('\n');
-        s.insert('\r');
-        s.insert('\f');
-        s.insert('\v');
-    } else if (name == "print") {
-        for (int c = 32; c <= 126; ++c)
-            s.insert(c);
-    } else if (name == "graph") {
-        for (int c = 33; c <= 126; ++c)
-            s.insert(c);
-    } else if (name == "cntrl") {
-        for (int c = 0; c <= 31; ++c)
-            s.insert(c);
-        s.insert(127);
-    } else if (name == "xdigit") {
-        for (int c = '0'; c <= '9'; ++c)
-            s.insert(c);
-        for (int c = 'a'; c <= 'f'; ++c)
-            s.insert(c);
-        for (int c = 'A'; c <= 'F'; ++c)
-            s.insert(c);
-    } else if (name == "blank") {
-        s.insert(' ');
-        s.insert('\t');
+    for (int c = 0; c < 256; ++c) {
+        bool match = false;
+        if (name == "alpha") match = isalpha((unsigned char)c);
+        else if (name == "upper") match = isupper((unsigned char)c);
+        else if (name == "lower") match = islower((unsigned char)c);
+        else if (name == "digit") match = isdigit((unsigned char)c);
+        else if (name == "alnum") match = isalnum((unsigned char)c);
+        else if (name == "space") match = isspace((unsigned char)c);
+        else if (name == "blank") match = isblank((unsigned char)c);
+        else if (name == "print") match = isprint((unsigned char)c);
+        else if (name == "graph") match = isgraph((unsigned char)c);
+        else if (name == "cntrl") match = iscntrl((unsigned char)c);
+        else if (name == "xdigit") match = isxdigit((unsigned char)c);
+        else if (name == "punct") match = ispunct((unsigned char)c);
+        
+        if (match) s.insert(c);
     }
     return s;
 }
@@ -218,6 +188,34 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
                     }
                 }
 
+                if (rawContent.substr(j, 2) == "[.") {
+                    size_t end = rawContent.find(".]", j + 2);
+                    if (end != std::string::npos) {
+                        std::string content = rawContent.substr(j + 2, end - (j + 2));
+                        if (content.size() == 1) {
+                            set.insert((unsigned char)content[0]);
+                        } else {
+                            std::cerr << "warning: multi-character collating elements not supported: [." << content << ".]" << std::endl;
+                        }
+                        j = end + 1;
+                        continue;
+                    }
+                }
+
+                if (rawContent.substr(j, 2) == "[=") {
+                    size_t end = rawContent.find("=]", j + 2);
+                    if (end != std::string::npos) {
+                        std::string content = rawContent.substr(j + 2, end - (j + 2));
+                        if (content.size() == 1) {
+                            set.insert((unsigned char)content[0]);
+                        } else {
+                            std::cerr << "warning: multi-character equivalence classes not supported: [=" << content << "=]" << std::endl;
+                        }
+                        j = end + 1;
+                        continue;
+                    }
+                }
+
                 char current;
                 if (rawContent[j] == '\\' && j + 1 < rawContent.size()) {
                     char next = rawContent[++j];
@@ -269,9 +267,9 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
 
             if (negated) {
                 std::set<int> inverted;
-                for (int k = -128; k <= 127; ++k) {
-                    if (set.find((unsigned char)k) == set.end())
-                        inverted.insert((unsigned char)k);
+                for (int k = 0; k < 256; ++k) {
+                    if (set.find(k) == set.end())
+                        inverted.insert(k);
                 }
                 tokens.push_back(Token(inverted));
             } else {
@@ -294,7 +292,7 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
                         if (comma + 1 < content.size())
                             m = std::stoi(content.substr(comma + 1));
                         else
-                            m = 999;
+                            m = -1;
                     }
                 } catch (...) {
                     valid = false;
@@ -345,9 +343,9 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
         } else if (c == '.') {
 
             std::set<int> dotSet;
-            for (int k = -128; k <= 127; ++k) {
-                if ((char)k != '\n') {
-                    dotSet.insert((char)k);
+            for (int k = 0; k < 256; ++k) {
+                if (k != '\n') {
+                    dotSet.insert(k);
                 }
             }
             tokens.push_back(Token(dotSet));

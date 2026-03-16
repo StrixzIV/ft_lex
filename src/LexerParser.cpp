@@ -17,9 +17,11 @@
 #include <sstream>
 
 LexerParser::LexerParser(const std::vector<std::string> &filenames)
-    : _filenames(filenames), _lineNo(1) {
+    : _filenames(filenames), _lineNo(1), _usePointerMode(false) {
     _startConditions.push_back({"INITIAL", false});
 }
+
+bool LexerParser::isPointerMode() const { return _usePointerMode; }
 
 const std::string &LexerParser::getDefinitions() const { return _definitions; }
 
@@ -183,14 +185,23 @@ void LexerParser::_parseDefinitions() {
         }
 
         if (trimmed[0] == '%') {
-            if (trimmed.size() > 1 &&
-                (trimmed[1] == 's' || trimmed[1] == 'x')) {
+            if (trimmed.find("%s") == 0 || trimmed.find("%x") == 0) {
                 bool isExclusive = (trimmed[1] == 'x');
                 std::istringstream varStream(trimmed.substr(2));
                 std::string condName;
                 while (varStream >> condName) {
                     _startConditions.push_back({condName, isExclusive});
                 }
+            } else if (trimmed.find("%array") == 0) {
+                _usePointerMode = false;
+            } else if (trimmed.find("%pointer") == 0) {
+                _usePointerMode = true;
+            } else if (trimmed.find("%option") == 0) {
+                std::cerr << "warning: %option ignored" << std::endl;
+            } else {
+                size_t spacePos = trimmed.find_first_of(" \t");
+                std::string directive = (spacePos == std::string::npos) ? trimmed : trimmed.substr(0, spacePos);
+                std::cerr << "warning: unknown directive '" << directive << "' ignored" << std::endl;
             }
             continue;
         }
@@ -448,6 +459,7 @@ void LexerParser::_parseRules() {
         rule.regex = _content.substr(regexStartPos, currentPos - regexStartPos);
         if (rule.regex.empty())
             continue;
+        rule.hasBOL = (rule.regex[0] == '^');
         rule.regex = _expandDefinitions(rule.regex);
 
         while (currentPos < _content.size() &&

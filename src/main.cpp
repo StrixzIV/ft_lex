@@ -152,9 +152,9 @@ int main(int argc, char **argv) {
         const auto &rules = parser.getRulesList();
 
         if (!suppress_summary) {
-            std::cout << "ft_lex: Processing " << input_filenames.size()
+            std::cerr << "ft_lex: Processing " << input_filenames.size()
                       << " files for target '" << target_lang << "'...\n";
-            std::cout << "ft_lex: Parsed " << rules.size()
+            std::cerr << "ft_lex: Parsed " << rules.size()
                       << (rules.size() == 1 ? " rule" : " rules") << " across "
                       << startConds.size() << " start conditions.\n";
         }
@@ -192,8 +192,7 @@ int main(int argc, char **argv) {
                     std::vector<Token> postfix =
                         RegexParser::toPostfix(rule.regex);
 
-                    bool hasBOL =
-                        (rule.regex.size() > 0 && rule.regex[0] == '^');
+                    bool hasBOL = rule.hasBOL;
 
                     NFA nfa = NFA::fromRegex(postfix, stateCounter);
 
@@ -267,7 +266,7 @@ int main(int argc, char **argv) {
             }
             generator->generate(dfas, parser, compression, outfile);
             outfile.close();
-            std::cout << "Generated " << output_filename << " successfully.\n";
+            std::cerr << "Generated " << output_filename << " successfully." << std::endl;
         }
 
     }
