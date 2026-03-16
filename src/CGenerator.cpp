@@ -380,12 +380,15 @@ std::string CGenerator::generateEofActions(const LexerParser &parser) {
     const auto &eofActions = parser.getEofActions();
 
     if (!eofActions.empty()) {
-        ss << "            switch (yy_start) {\n";
+        bool first = true;
         for (const auto &[condIdx, action] : eofActions) {
-            ss << "                case " << condIdx << ": {\n";
-            ss << "                    " << action << "\n";
-            ss << "                    break;\n";
-            ss << "                }\n";
+            if (first) {
+                ss << "            if (yy_start == " << condIdx << ") {\n";
+            } else {
+                ss << "            } else if (yy_start == " << condIdx << ") {\n";
+            }
+            ss << "                " << action << "\n";
+            first = false;
         }
         ss << "            }\n";
     }

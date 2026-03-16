@@ -91,6 +91,41 @@ static std::set<int> _getPOSIXClass(const std::string &name) {
     return s;
 }
 
+static char _parseEscape(const std::string &s, size_t &i) {
+    if (i + 1 >= s.size())
+        throw std::runtime_error("Trailing backslash in regex");
+    char next = s[++i];
+    if (next == 'n') return '\n';
+    if (next == 't') return '\t';
+    if (next == 'r') return '\r';
+    if (next == 'v') return '\v';
+    if (next == 'f') return '\f';
+    if (next == 'a') return '\a';
+    if (next >= '0' && next <= '7') {
+        int val = next - '0';
+        if (i + 1 < s.size() && s[i+1] >= '0' && s[i+1] <= '7')
+            val = val * 8 + (s[++i] - '0');
+        if (i + 1 < s.size() && s[i+1] >= '0' && s[i+1] <= '7')
+            val = val * 8 + (s[++i] - '0');
+        return (char)(val & 0xFF);
+    }
+    if (next == 'x') {
+        if (i + 1 >= s.size())
+            throw std::runtime_error("\\x with no hex digits in regex");
+        int val = 0;
+        bool any = false;
+        while (i + 1 < s.size() && isxdigit((unsigned char)s[i+1])) {
+            char hc = s[++i];
+            val = val * 16 + (isdigit((unsigned char)hc) ? hc - '0' :
+                              tolower((unsigned char)hc) - 'a' + 10);
+            any = true;
+        }
+        if (!any) throw std::runtime_error("\\x with no hex digits in regex");
+        return (char)(val & 0xFF);
+    }
+    return next;
+}
+
 std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
     std::vector<Token> tokens;
 
@@ -116,25 +151,8 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
         }
 
         if (c == '\\') {
-            if (i + 1 < regex.size()) {
-                char next = regex[++i];
-                char escaped = next;
-
-                if (next == 'n')
-                    escaped = '\n';
-                else if (next == 't')
-                    escaped = '\t';
-                else if (next == 'r')
-                    escaped = '\r';
-                else if (next == 'v')
-                    escaped = '\v';
-                else if (next == 'f')
-                    escaped = '\f';
-
-                tokens.push_back(Token(escaped, CHAR));
-            } else {
-                throw std::runtime_error("Trailing backslash in regex");
-            }
+            char escaped = _parseEscape(regex, i);
+            tokens.push_back(Token(escaped, CHAR));
         } else if (c == '[') {
 
             std::set<int> set;
@@ -218,19 +236,7 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
 
                 char current;
                 if (rawContent[j] == '\\' && j + 1 < rawContent.size()) {
-                    char next = rawContent[++j];
-                    if (next == 'n')
-                        current = '\n';
-                    else if (next == 't')
-                        current = '\t';
-                    else if (next == 'r')
-                        current = '\r';
-                    else if (next == 'v')
-                        current = '\v';
-                    else if (next == 'f')
-                        current = '\f';
-                    else
-                        current = next;
+                    current = _parseEscape(rawContent, j);
                 } else {
                     current = rawContent[j];
                 }
@@ -240,19 +246,7 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
                     char rangeEnd;
                     if (rawContent[nextIdx] == '\\' &&
                         nextIdx + 1 < rawContent.size()) {
-                        char next = rawContent[++nextIdx];
-                        if (next == 'n')
-                            rangeEnd = '\n';
-                        else if (next == 't')
-                            rangeEnd = '\t';
-                        else if (next == 'r')
-                            rangeEnd = '\r';
-                        else if (next == 'v')
-                            rangeEnd = '\v';
-                        else if (next == 'f')
-                            rangeEnd = '\f';
-                        else
-                            rangeEnd = next;
+                        rangeEnd = _parseEscape(rawContent, nextIdx);
                     } else {
                         rangeEnd = rawContent[nextIdx];
                     }
@@ -311,22 +305,7 @@ std::vector<Token> RegexParser::_tokenize(const std::string &regex) {
             i++;
             while (i < regex.size() && regex[i] != '"') {
                 if (regex[i] == '\\') {
-                    i++;
-                    if (i >= regex.size())
-                        throw std::runtime_error("Trailing backslash in quote");
-                    char next = regex[i];
-                    char escaped = next;
-                    if (next == 'n')
-                        escaped = '\n';
-                    else if (next == 't')
-                        escaped = '\t';
-                    else if (next == 'r')
-                        escaped = '\r';
-                    else if (next == 'v')
-                        escaped = '\v';
-                    else if (next == 'f')
-                        escaped = '\f';
-                    tokens.push_back(Token(escaped, CHAR));
+                    tokens.push_back(Token(_parseEscape(regex, i), CHAR));
                 } else {
                     tokens.push_back(Token(regex[i], CHAR));
                 }

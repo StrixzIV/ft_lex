@@ -197,7 +197,6 @@ __EOF_ACTION_PLACEHOLDER__
         /* Push first char to buffer */
         if (yy_buf_ensure(buf_idx + 2) < 0) return -1;
         if (c == '\n') yylineno++;
-        yy_at_bol = (c == '\n');
         yy_buffer[buf_idx++] = (char)c;
         yy_buffer[buf_idx] = '\0';
 
@@ -240,7 +239,6 @@ __EOF_ACTION_PLACEHOLDER__
 
             if (yy_buf_ensure(buf_idx + 2) < 0) return -1;
             if (c == '\n') yylineno++;
-            yy_at_bol = (c == '\n');
             yy_buffer[buf_idx++] = (char)c;
             yy_buffer[buf_idx] = '\0';
 

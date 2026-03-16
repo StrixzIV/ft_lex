@@ -49,7 +49,6 @@ extern int yy_more_len;
 
 int yylex(void);
 int yywrap(void);
-int yyless(int n);
 int input(void);
 int unput(int c);
 int yymore(void);
