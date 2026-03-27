@@ -35,6 +35,7 @@ struct State {
     State(int id)
         : id(id), isAccepting(false), priority(-1),
           trailingContextBoundary(false) {}
+    ~State() {}
 };
 
 class NFA {

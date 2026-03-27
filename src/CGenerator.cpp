@@ -249,8 +249,7 @@ std::string CGenerator::generateTables(const std::vector<DFA> &dfas,
                             auto it = state->transitions.find(repr_sym);
                             if (it != state->transitions.end())
                                 nextIdx = idToIndex[it->second->id];
-                        }
-                        ss << nextIdx << ",";
+                        }                        ss << nextIdx << ",";
                     }
                     ss << "},\n";
                 }

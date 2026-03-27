@@ -270,6 +270,13 @@ int main(int argc, char **argv) {
                 std::cerr << "Generated " << output_filename << " successfully." << std::endl;
         }
 
+        // Break DFA circular references
+        for (auto &dfa : dfas) {
+            for (auto &state : dfa.states) {
+                state->transitions.clear();
+            }
+        }
+
     }
 
     catch (const std::exception &e) {

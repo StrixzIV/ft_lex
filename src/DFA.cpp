@@ -146,6 +146,12 @@ DFA DFA::fromNFA(const NFA &nfa, int &dfaStateCounter) {
         }
     }
 
+    // Break circular references in NFA states
+    for (auto const& pair : idToState) {
+        pair.second->transitions.clear();
+        pair.second->epsilonTransitions.clear();
+    }
+
     return dfa;
 }
 

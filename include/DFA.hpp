@@ -36,6 +36,7 @@ struct DFAState {
     DFAState(int id)
         : id(id), isAccepting(false), priority(-1),
           trailingContextBoundary(false) {}
+    ~DFAState() {}
 };
 
 class DFA {
