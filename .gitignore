@@ -47,4 +47,6 @@ lex.yy.*
 libl
 obj
 
+!src/libl
+
 **/*.template.cpp
