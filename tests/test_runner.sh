@@ -293,6 +293,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     
     # 1. Lexing comparison with flex (Original requirement)
     run_test "$PARSER_C_DIR/c.l" "$DATA_DIR/strncmp.c"
+    run_test "$PARSER_C_DIR/hardcore.l" "$DATA_DIR/hardcore.txt"
     
     # 2. Argument and Error handling
     run_eval_test "$FT_LEX" 1 "No arguments" "Usage:"

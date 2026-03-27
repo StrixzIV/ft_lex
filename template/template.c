@@ -296,20 +296,28 @@ __EOF_ACTION_PLACEHOLDER__
             yy_buf_len = buf_idx;
 
             yy_did_reject = 0;
-            yy_full_match_rule = yy_accept[last_accepting_state];
-yy_reject_action:
+            int yy_rule_ptr = yy_accept_rules_idx[last_accepting_state];
+            yy_full_match_rule = (yy_rule_ptr != -1) ? yy_accept_rules[yy_rule_ptr] : -1;
+yy_try_rule:
 
 __YYLEX_BODY_PLACEHOLDER__
 
+yy_reject_action:
             if (yy_did_reject) {
-                /* REJECT was called — find next best rule.
-                 * We increment the rule number so the if/else chain
-                 * falls through to a later rule if one matches. */
-                yy_full_match_rule++;
-                /* Check if any rule at this priority or higher matches
-                 * by re-scanning the accept table for the state */
-                yy_did_reject = 0;
-                goto yy_reject_action;
+                /* REJECT was called — find next best rule. */
+                if (yy_rule_ptr != -1 && yy_accept_rules[yy_rule_ptr] != -1) {
+                    yy_rule_ptr++;
+                    yy_full_match_rule = yy_accept_rules[yy_rule_ptr];
+                } else {
+                    yy_full_match_rule = -1;
+                }
+                
+                if (yy_full_match_rule != -1) {
+                    yy_did_reject = 0;
+                    goto yy_try_rule;
+                }
+                /* No more rules for this match — in a real flex, we'd try 
+                 * shorter matches, but for now we just fall through. */
             }
 
             /* Restore hold char after action */

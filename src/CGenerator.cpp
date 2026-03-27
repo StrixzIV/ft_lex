@@ -328,6 +328,35 @@ std::string CGenerator::generateTables(const std::vector<DFA> &dfas,
     }
     ss << "\n};\n\n";
 
+    /* ── Multi-accept rule lists ----------------------------------------- */
+    std::vector<int> rules_packed;
+    std::vector<int> rules_idx(totalStates, -1);
+    for (const auto &dfa : dfas) {
+        for (const auto &state : dfa.states) {
+            if (!state->acceptingRules.empty()) {
+                rules_idx[idToIndex.at(state->id)] = (int)rules_packed.size();
+                for (int r : state->acceptingRules) {
+                    rules_packed.push_back(r);
+                }
+                rules_packed.push_back(-1); // Terminator
+            }
+        }
+    }
+
+    ss << "static const int yy_accept_rules[" << rules_packed.size() << "] = {\n    ";
+    for (size_t i = 0; i < rules_packed.size(); ++i) {
+        ss << rules_packed[i] << ", ";
+        if ((i + 1) % 15 == 0) ss << "\n    ";
+    }
+    ss << "\n};\n\n";
+
+    ss << "static const int yy_accept_rules_idx[" << totalStates << "] = {\n    ";
+    for (size_t i = 0; i < rules_idx.size(); ++i) {
+        ss << rules_idx[i] << ", ";
+        if ((i + 1) % 15 == 0) ss << "\n    ";
+    }
+    ss << "\n};\n\n";
+
     /* ── Trailing-context table ----------------------------------------- */
     ss << "static const int yy_trailing_ctx[" << totalStates
        << "] = {\n    ";

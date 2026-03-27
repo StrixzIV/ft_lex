@@ -119,8 +119,10 @@ DFA DFA::fromNFA(const NFA &nfa, int &dfaStateCounter) {
                 newDFA->nfaStates = nextIds;
 
                 int winP = -1;
+                std::set<int> rules;
                 for (const auto &s : closureSet) {
                     if (s->isAccepting) {
+                        rules.insert(s->priority);
                         if (winP == -1 ||
                             (s->priority != -1 && s->priority < winP)) {
                             winP = s->priority;
@@ -132,6 +134,7 @@ DFA DFA::fromNFA(const NFA &nfa, int &dfaStateCounter) {
                     if (s->trailingContextBoundary)
                         newDFA->trailingContextBoundary = true;
                 }
+                newDFA->acceptingRules.assign(rules.begin(), rules.end());
 
                 dfa.states.push_back(newDFA);
                 dfaStatesMap[nextIds] = newDFA;

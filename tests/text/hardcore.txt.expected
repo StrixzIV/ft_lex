@@ -1,0 +1,98 @@
+simple ret: 6 yytext: [simple]
+
+simple* ret: 25 yytext: [simpleeeeeeeeeeeeeeeeeeee]
+
+(simple){2,4} ret: 18 yytext: [simplesimplesimple]
+
+.* ret: 30 yytext: [simplesimplesimplesimplesimple]
+
+.* ret: 33 yytext: [simplesimpleeeesimplesimplesimple]
+
+.* ret: 1 yytext: [a]
+
+(aa|aaa)*aaaa ret: 2 yytext: [aa]
+
+.* ret: 3 yytext: [aaa]
+
+(aa|aaa)*aaaaaa ret: 4 yytext: [aaaa]
+
+(aa|aaa)*aaaaaaa ret: 5 yytext: [aaaaa]
+
+(aa|aaa)*aaaaaaaa ret: 6 yytext: [aaaaaa]
+
+(aa|aaa)*aaaaaaaaa ret: 7 yytext: [aaaaaaa]
+
+(aa|aaa)*aaaaaaaaaa ret: 8 yytext: [aaaaaaaa]
+
+(aa|aaa)*aaaaaaaaaaa ret: 9 yytext: [aaaaaaaaa]
+
+(aa|aaa)*aaaaaaaaaaaa ret: 10 yytext: [aaaaaaaaaa]
+
+alternative|ALTERNATIVE ret: 11 yytext: [alternative]
+
+alternative|ALTERNATIVE ret: 11 yytext: [ALTERNATIVE]
+
+escaping\"\[\\\|\{\$ ret: 14 yytext: [escaping"[\|{$]
+
+.* ret: 11 yytext: [ anchoring.]
+
+.* ret: 10 yytext: [anchoring.]
+
+.* ret: 10 yytext: [ anchoring]
+
+^anchoring$ ret: 9 yytext: [anchoring]
+
+.* ret: 10 yytext: [regex with]
+
+"regex with"/trai*li*ng ret: 10 yytext: [regex with]
+.* ret: 9 yytext: [ trailing]
+
+"regex with"/trai*li*ng ret: 10 yytext: [regex with]
+.* ret: 8 yytext: [ traling]
+
+"regex with"/trai*li*ng ret: 10 yytext: [regex with]
+.* ret: 23 yytext: [ traiiiiiiiiliiiiiiiing]
+
+[]]* ret: 1 yytext: []]
+
+[]]* ret: 5 yytext: []]]]]]
+
+.* ret: 19 yytext: [invertedasfhglhjkgd]
+
+class[[:digit:]] ret: 9 yytext: [class4242]
+
+.* ret: 5 yytext: [class]
+
+hexa* ret: 4 yytext: [hexa]
+
+octal?L? ret: 5 yytext: [octal]
+
+octal?L? ret: 5 yytext: [octaL]
+
+{DEFINE}* ret: 23 yytext: [definedeinedeffffnedene]
+
+.* ret: 14 yytext: [state_specific]
+
+<x1,INITIAL>"x1 or initial" ret: 13 yytext: [x1 or initial]
+
+
+<s1>"state s1" ret: 14 yytext: [state_specific]
+
+
+<s1>"state s1" ret: 14 yytext: [state_specific]
+
+.* ret: 13 yytext: [x1 or initial]
+
+.* ret: 25 yytext: [switch_from_x1_to_INITIAL]
+
+lexalternative | LEXALTERNATIVE ret: 14 yytext: [lexalternative]
+
+lexalternative | LEXALTERNATIVE ret: 14 yytext: [LEXALTERNATIVE]
+
+ABC.* ret: 3 yytext: [ABC]
+
+.* ret: 5 yytext: [abdfg]
+
+.* ret: 8 yytext: [abcdefgh]
+
+.* ret: 14 yytext: [unmatched line]

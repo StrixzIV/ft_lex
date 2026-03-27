@@ -27,6 +27,7 @@ struct DFAState {
 
     bool isAccepting;
     int priority;
+    std::vector<int> acceptingRules;
     std::string action;
     bool trailingContextBoundary;
 
