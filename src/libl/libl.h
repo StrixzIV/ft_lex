@@ -43,20 +43,34 @@ extern int yy_more_len;
 
 /* --- Macros --- */
 
-#define BEGIN(state) (yy_start = (state))
+#define BEGIN (yy_start) =
+#define INITIAL 0
+#define YY_START (yy_start)
+
+/* Standard Flex-like macros for user actions */
+#ifndef ECHO
+# define ECHO (void)fwrite(yytext, yyleng, 1, yyout)
+#endif
+
+#ifndef YY_STATE_EOF
+# define YY_STATE_EOF(state) (YY_START == (state))
+#endif
 
 /* --- Library functions --- */
 
 int yylex(void);
+int yylex_destroy(void);
 int yywrap(void);
 int input(void);
 int unput(int c);
 int yymore(void);
+int yyless(int n);
 
 /* --- Internal helpers --- */
 
 void buffer_realloc(int needed);
 int yy_read_char(void);
 void yy_restore_hold_char(void);
+int yy_buf_ensure(int needed);
 
 #endif

@@ -14,5 +14,6 @@
 
 __attribute__((weak)) int main(void) {
   yylex();
+  yylex_destroy();
   return 0;
 }

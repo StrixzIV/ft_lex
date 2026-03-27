@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 __HEADER_PLACEHOLDER__
 
@@ -348,3 +349,22 @@ yy_reject_action:
 }
 
 __USER_CODE_PLACEHOLDER__
+
+int yylex_destroy(void) {
+    if (yy_buffer) {
+        free(yy_buffer);
+        yy_buffer = NULL;
+    }
+    yy_buf_cap = 0;
+    yy_buf_pos = 0;
+    yy_buf_len = 0;
+    yy_start = 0;
+    yy_at_bol = 1;
+    yylineno = 1;
+    yy_hold_char_restored = 1;
+    yy_more_flag = 0;
+    yy_more_len = 0;
+    yyin = NULL;
+    yyout = NULL;
+    return 0;
+}
