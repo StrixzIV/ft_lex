@@ -73,12 +73,13 @@ ft_lex/
 │   ├── utils.cpp
 │   └── libl/               # Runtime support library
 │       ├── libl.h          # Shared variable externs + function declarations
-│       ├── main.c          # Weak main() -> yylex()
+│       ├── main.c          # Weak main() -> yylex() + yylex_destroy()
 │       ├── yywrap.c        # Weak yywrap() -> return 1
 │       ├── input.c         # input(): raw char read with line tracking
 │       ├── unput.c         # unput(c): push character back
 │       ├── yyless.c        # yyless(n): shorten current match
-│       └── yymore.c        # yymore(): extend current match
+│       ├── yymore.c        # yymore(): extend current match
+│       └── yylex_destroy.c # (Moved to template) yylex_destroy(): free buffers
 ├── template/
 │   ├── template.c          # C scanner template (with __PLACEHOLDER__ markers)
 │   └── template.py         # Python scanner template (with __PLACEHOLDER__ markers)
@@ -264,50 +265,83 @@ Each `State` node carries:
 - `isAccepting`, `priority`, `action` — inherited by the corresponding DFA state on accepting transitions
 - `trailingContextBoundary` — marks the split-point for `/` trailing context
 
-### Thompson's Construction fragments
+### Thompson's Construction Fragments
 
+Each regex operator is converted into a small NFA fragment. These fragments are then composed to build the final automaton.
+
+#### 1. Single Character / Charset
+Basic transition from a start state to an accepting state.
 ```mermaid
-graph TB
-    subgraph makeChar["makeChar(c): single literal"]
-        direction LR
-        s0(("q0")) -- "c" --> s1(("q1✓"))
-    end
-
-    subgraph makeConcat["makeConcat(A, B): concatenation"]
-        direction LR
-        sa(("A.start")) --> ea(("A.end")) -- "ε" --> sb(("B.start")) --> eb(("B.end✓"))
-    end
-
-    subgraph makeUnion["makeUnion(A, B): alternation"]
-        direction TB
-        su(("new<br>start")) -- "ε" --> ua(("A.start"))
-        su -- "ε" --> ub(("B.start"))
-        ua --> ea2(("A.end")) -- "ε" --> eu(("new<br>end✓"))
-        ub --> eb2(("B.end")) -- "ε" --> eu
-    end
-
-    subgraph makeKleene["makeKleene(A): A*"]
-        direction LR
-        sk(("new<br>start")) -- "ε" --> uk(("A.start"))
-        uk --> ek(("A.end"))
-        ek -- "ε (loop)" --> uk
-        sk -- "ε (skip)" --> fk(("new<br>end✓"))
-        ek -- "ε (exit)" --> fk
-    end
+graph LR
+    s0(("q0")) -- "c" --> s1(("q1✓"))
 ```
 
-| Operation | Factory method |
-|---|---|
-| Single character | `makeChar(c)` |
-| Character set | `makeSet(set<int>)` |
-| Concatenation | `makeConcat(left, right)` |
-| Alternation `\|` | `makeUnion(top, bottom)` |
-| Kleene star `*` | `makeKleene(nfa)` |
-| One-or-more `+` | `makePlus(nfa)` — first copy + Kleene |
-| Zero-or-one `?` | `makeOption(nfa)` — union with empty path |
-| Repeat `{n,m}` | `makeRepeat(nfa, n, m)` — unrolls via `nfa.copy()` |
-| Any char `.` | `makeAnyChar()` — charset of all non-`<br>` bytes |
-| Trailing context `/` | `makeTrailingContext(r1, r2)` — sets boundary flag on r1's accept state |
+#### 2. Concatenation (`r1r2`)
+The end of the first NFA is connected to the start of the second via an ε-transition.
+```mermaid
+graph LR
+    sa(("r1.start")) --> ea(("r1.end")) -- "ε" --> sb(("r2.start")) --> eb(("r2.end✓"))
+```
+
+#### 3. Alternation (`r1|r2`)
+A new start state splits into both NFAs, and both NFAs merge into a new end state.
+```mermaid
+graph TD
+    su(("start")) -- "ε" --> ua(("r1.start"))
+    su -- "ε" --> ub(("r2.start"))
+    ua --> ea2(("r1.end")) -- "ε" --> eu(("end✓"))
+    ub --> eb2(("r2.end")) -- "ε" --> eu
+```
+
+#### 4. Kleene Star (`r*`)
+Supports zero or more repetitions. Includes a loop-back and a skip-ahead path.
+```mermaid
+graph LR
+    sk(("start")) -- "ε" --> uk(("A.start"))
+    uk --> ek(("A.end"))
+    ek -- "ε (loop)" --> uk
+    sk -- "ε (skip)" --> fk(("end✓"))
+    ek -- "ε (exit)" --> fk
+```
+
+#### 5. One-or-More (`r+`)
+Similar to Kleene star but requires at least one match (no initial skip path).
+```mermaid
+graph LR
+    sp(("start")) -- "ε" --> up(("A.start"))
+    up --> ep(("A.end"))
+    ep -- "ε (loop)" --> up
+    ep -- "ε (exit)" --> fp(("end✓"))
+```
+
+#### 6. Zero-or-One (`r?`)
+Provides an optional path that skips the NFA entirely.
+```mermaid
+graph LR
+    so(("start")) -- "ε" --> uo(("A.start"))
+    so -- "ε (skip)" --> fo(("end✓"))
+    uo --> eo(("A.end")) -- "ε" --> fo
+```
+
+#### 7. Trailing Context (`r1/r2`)
+Matches `r1` but only if `r2` follows. The boundary between them is marked for backtracking.
+```mermaid
+graph LR
+    tr1(("r1.start")) --> ar1(("r1.end<br>(boundary)")) -- "ε" --> tr2(("r2.start")) --> ar2(("r2.end✓"))
+```
+
+| Operation | Factory method | Description |
+|---|---|---|
+| Single character | `makeChar(c)` | Single transition on `c` |
+| Character set | `makeSet(set<int>)` | Multiple transitions on all `c ∈ set` |
+| Concatenation | `makeConcat(left, right)` | `left.end --ε--> right.start` |
+| Alternation `\|` | `makeUnion(top, bottom)` | ε-transitions to both starts, both ends to new end |
+| Kleene star `*` | `makeKleene(nfa)` | Zero or more (includes ε-skip and loop) |
+| One-or-more `+` | `makePlus(nfa)` | One or more (loop back, no initial skip) |
+| Zero-or-one `?` | `makeOption(nfa)` | Union with empty path |
+| Repeat `{n,m}` | `makeRepeat(nfa, n, m)` | Concatenates `n` copies, then `m-n` optional copies |
+| Any char `.` | `makeAnyChar()` | Transitions for all chars 0-255 except `\n` |
+| Trailing context `/` | `makeTrailingContext(r1, r2)` | `r1 --ε--> r2`, marks `r1.end` as boundary |
 
 ### Master NFA per start condition
 
@@ -488,17 +522,22 @@ These are declared `extern` in the generated scanner and defined once in `libl`:
 
 ```mermaid
 flowchart TB
-    main_c["main.c<br>main() calls yylex()<br>(weak symbol — overrideable<br>by user-defined main)"]
-    yw["yywrap.c<br>yywrap()<br>Default: return 1 (stop)<br>Weak — user overrides<br>to chain input files<br>by returning 0"]
-    inp["input.c<br>input()<br>Read next raw char<br>bypassing yytext buffer;<br>updates yylineno on newline"]
-    unp["unput.c<br>unput(c)<br>Push c back via ungetc();<br>decrements yylineno if newline;<br>restores hold-char first"]
-    yl["yyless (moved to template)<br>yyless(n)<br>Push back chars [n..yyleng)<br>into input; truncates yytext<br>to length n; fixes yylineno"]
-    ym["yymore.c<br>yymore()<br>Sets yy_more_flag;<br>next yylex iteration<br>appends to current yytext<br>rather than resetting it"]
+    main_c["main.c<br>main() calls yylex()<br>followed by yylex_destroy()<br>(weak symbol — overrideable)"]
+    yw["yywrap.c<br>yywrap()<br>Default: return 1 (stop)<br>Weak — user overrides<br>to chain input files"]
+    inp["input.c<br>input()<br>Read next raw char<br>bypassing yytext buffer"]
+    unp["unput.c<br>unput(c)<br>Push c back via ungetc()"]
+    yl["yyless (moved to template)<br>yyless(n)<br>Truncates match to length n<br>pushes back remainder"]
+    ym["yymore.c<br>yymore()<br>Sets flag to append next<br>match to current yytext"]
+    yd["yylex_destroy (in template)<br>yylex_destroy()<br>Frees internal buffers<br>resets global state"]
 ```
 
 #### `main()` — weak entry point
 
-`main.c` declares `main()` with `__attribute__((weak))`. If the user's code (or user code section of the `.l` file) supplies no `main()`, the library's default kicks in and simply calls `yylex()`. If the user provides their own `main()`, the linker silently uses theirs with no conflict.
+`main.c` declares `main()` with `__attribute__((weak))`. If the user supplies no `main()`, the library's default calls `yylex()` then `yylex_destroy()`.
+
+#### `yylex_destroy()` — memory cleanup
+
+(Implemented in `template.c`). Frees the dynamic `yy_buffer` and resets all global lexer state (line numbers, start conditions, BOL status). Calling this is essential for passing memory leak checks (like Valgrind) and for resetting the lexer if you need to run it multiple times in a single process. Unlike reentrant Flex, this clears the *global* state.
 
 #### `yywrap()` — EOF callback
 
