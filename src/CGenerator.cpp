@@ -352,9 +352,9 @@ std::string CGenerator::_generateRulesSwitch(const LexerParser &parser) {
     const auto &rules = parser.getRulesList();
     for (size_t i = 0; i < rules.size(); ++i) {
         if (i == 0) {
-            ss << "            if (yy_accept[last_accepting_state] == " << i << ") {\n";
+            ss << "            if (yy_full_match_rule == " << i << ") {\n";
         } else {
-            ss << "            } else if (yy_accept[last_accepting_state] == " << i << ") {\n";
+            ss << "            } else if (yy_full_match_rule == " << i << ") {\n";
         }
         ss << "                " << rules[i].action << "\n";
     }

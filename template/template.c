@@ -83,10 +83,15 @@ int yyless(int n) {
   return 0;
 }
 
-#define BEGIN(state) (yy_start = (state))
+#define BEGIN yy_start =
 #ifndef ECHO
 #define ECHO fprintf(yyout, "%s", yytext)
 #endif
+
+/* REJECT support */
+int yy_did_reject = 0;
+int yy_full_match_rule = -1;
+#define REJECT { yy_did_reject = 1; goto yy_reject_action; }
 
 __TABLES_PLACEHOLDER__
 
@@ -290,7 +295,22 @@ __EOF_ACTION_PLACEHOLDER__
             yy_buf_pos = buf_idx;
             yy_buf_len = buf_idx;
 
+            yy_did_reject = 0;
+            yy_full_match_rule = yy_accept[last_accepting_state];
+yy_reject_action:
+
 __YYLEX_BODY_PLACEHOLDER__
+
+            if (yy_did_reject) {
+                /* REJECT was called — find next best rule.
+                 * We increment the rule number so the if/else chain
+                 * falls through to a later rule if one matches. */
+                yy_full_match_rule++;
+                /* Check if any rule at this priority or higher matches
+                 * by re-scanning the accept table for the state */
+                yy_did_reject = 0;
+                goto yy_reject_action;
+            }
 
             /* Restore hold char after action */
             if (!yy_hold_char_restored) {

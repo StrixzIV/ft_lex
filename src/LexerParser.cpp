@@ -108,7 +108,26 @@ void LexerParser::_splitSections() {
     }
 
     size_t start_rules_pos = first_sep_pos + 2;
-    size_t second_sep_pos = _content.find("%%", start_rules_pos);
+
+    // Find the second %% delimiter. Per POSIX, it must appear at the
+    // beginning of a line (column 1). A naive find("%%") would match
+    // occurrences inside action code (e.g. printf("%%")).
+    size_t second_sep_pos = std::string::npos;
+    {
+        size_t searchFrom = start_rules_pos;
+        while (searchFrom < _content.size()) {
+            size_t candidate = _content.find("%%", searchFrom);
+            if (candidate == std::string::npos)
+                break;
+            // Valid if at the very start of the rules section or preceded by '\n'
+            if (candidate == start_rules_pos ||
+                (candidate > 0 && _content[candidate - 1] == '\n')) {
+                second_sep_pos = candidate;
+                break;
+            }
+            searchFrom = candidate + 2;
+        }
+    }
 
     if (second_sep_pos == std::string::npos) {
         _rules = _content.substr(start_rules_pos);

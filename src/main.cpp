@@ -266,7 +266,8 @@ int main(int argc, char **argv) {
             }
             generator->generate(dfas, parser, compression, outfile);
             outfile.close();
-            std::cerr << "Generated " << output_filename << " successfully." << std::endl;
+            if (!suppress_summary)
+                std::cerr << "Generated " << output_filename << " successfully." << std::endl;
         }
 
     }
