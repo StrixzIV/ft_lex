@@ -419,7 +419,7 @@ flowchart LR
     START((" ")) -->|start| S0
 
     S0(["S0<br>start"])
-    S1(["S1<br>saw 'i'"])
+    S1(["✓ S1<br>ACCEPT rule 1<br>IDENTIFIER<br>(saw 'i')"])
     S2(["✓ S2<br>ACCEPT rule 0<br>KW_IF"])
     S3(["✓ S3<br>ACCEPT rule 1<br>IDENTIFIER"])
 
